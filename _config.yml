@@ -135,7 +135,7 @@ related_blog_posts:
 giscus:
   repo: bayesways/bayesways.github.io      # <your-github-user-name>/<your-github-repo-name>
   repo_id: R_kgDOJEHZog
-  category: Announcements             # name of the category under which discussions will be created
+  category: Comments             # name of the category under which discussions will be created
   category_id: DIC_kwDOA5PmLc4CTBt6
   mapping: title                 # identify discussions by post title
   strict: 1                      # use strict identification mode
