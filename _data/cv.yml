@@ -1,12 +1,12 @@
-- title: General Information
-  type: map
-  contents:
-    - name: Full Name
-      value: Konstantinos Vamvourellis
-    # - name: Date of Birth
-    #   value: 14th March 1879
-    # - name: Languages
-    #   value: English, German
+# - title: General Information
+#   type: map
+#   contents:
+#     - name: Full Name
+#       value: Konstantinos Vamvourellis
+#     # - name: Date of Birth
+#     #   value: 14th March 1879
+#     # - name: Languages
+#     #   value: English, German
 
 - title: Education
   type: time_table
@@ -37,19 +37,52 @@
     - title: Data Scientist
       institution: ITE Management
       year: 2017-present
-      # description:
-      #   - Description 1.
+      description:
+        - Leading the Data Science and Technology Development team
       #   - Description 2.
       #   - title: Description 3.
       #     contents:
       #       - Sub-description 1.
       #       - Sub-description 2.
-    - title: Research Scientist
-      institution: Vencore Labs
+
+    - title: Research Scientist in Machine Learning
+      institution: Applied Communication Sciences / Vencore Labs
       year: 2014-2017
-      # description:
-      #   - Description 1.
+      description:
+        - Created and implemented in-house machine learning algorithms for private and public sector clients
       #   - Description 2.
+
+    - title: Summer Intern
+      institution: Microsoft Research
+      year: 2014
+
+    - title: Graduate Researcher in Cryptography
+      institution: Center for Algorithms and Interactive Scientific Software (CAISS)
+      year: 2013-2014
+
+
+- title: Skills
+  type: map
+  contents:
+    - name: Development
+      value: 8+ years of experience of software development in Python, 6+ years in R, familiarity with Java, Matlab, C
+    - name: Technology
+      value: linux, git, Stan, sql, streamlit
+    - name: Mathematics and Computer Science
+      value: Machine Learning/Data Science, MCMC, Bayesian Inference, Algorithms (Theory and Practice), Text Analysis, Linear Algebra, Statistics, MCMC
+    - name: Experience
+      value: Statistical Modeling and Simulation, Exploratory Data Analysis, Factor Modeling, Data Visualization, Text Analysis, Anomaly Detection, Algorithms Implementation and Optimization, Data Scraping, Data Engineering, Software Development and Management
+
+
+- title: Selected Awards
+  type: time_table
+  contents:
+    - title: Research Fellowship Award
+      institution: The Research Foundation, CUNY
+      year: 2013-2015
+    - title: Bronze Medal - Science Olympiad
+      institution: European Union
+      year: 2006
 
 #     - title: Director
 #       institution: Kaiser Wilhelm Institute for Physics, Berlin, Germany.
