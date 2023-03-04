@@ -22,5 +22,4 @@ social: false  # includes social icons at the bottom of the page
 I am head of Data Science at ITE Management, an alternative asset hedge fund. 
 I've held engineering and research scientist roles in industry since 2014.
 My academic training is in mathematics, computer science and statistics.
-I love learning how things work.
 
