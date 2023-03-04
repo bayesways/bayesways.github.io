@@ -3,12 +3,10 @@ layout: post
 title: Simulated Annealing
 author: ''
 date: '2020-06-26'
-categories: math-club
-tags:
-  - algorithms
-  - physics
-  - probability
-  - statistics
+tags: math-club
+categories: algorithms physics probability statistics
+giscus_comments: true
+related_posts: false
 ---
 
 Simulated annealing (SA) is a probabilistic technique for approximating the global optimum of a given function.

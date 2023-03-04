@@ -1,7 +1,10 @@
 ---
 layout: post
 title: State Space Models
-categories: math-club
+tags: math-club
+categories: machine-learning statistics
+giscus_comments: true
+related_posts: false
 ---
 
 State Space Models - a general overview

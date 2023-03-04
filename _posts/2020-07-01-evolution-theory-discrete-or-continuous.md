@@ -2,10 +2,10 @@
 layout: post
 title: Modern Synthesis
 date: '2020-07-01'
-categories: math-club
-tags:
-  - evolution theory
-  - statistics
+tags: math-club
+categories:  evolution-theory statistics
+giscus_comments: true
+related_posts: false
 ---
 
 

@@ -2,7 +2,7 @@
 layout: about
 title: about
 permalink: /
-# subtitle: <a href='#'>Affiliations</a>. Address. Contacts. Moto. Etc.
+# subtitle: <a href='#'>Data Scientist</a>. Address. Contacts. Moto. Etc.
 
 profile:
   align: right
@@ -18,4 +18,9 @@ selected_papers: false # includes a list of papers marked as "selected={true}"
 social: false  # includes social icons at the bottom of the page
 ---
 
-Data Scientist
+
+I am head of Data Science at ITE Management, an alternative asset hedge fund. 
+I've held engineering and research scientist roles in industry since 2014.
+My academic training is in mathematics, computer science and statistics.
+I love learning how things work.
+

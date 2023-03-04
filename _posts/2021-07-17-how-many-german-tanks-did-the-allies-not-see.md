@@ -1,21 +1,22 @@
 ---
+layout: post
 title: How many German tanks did the Allies not see?
 author: ''
 date: '2021-07-17'
-slug: how-many-german-tanks-did-the-allies-not-see
-categories: []
-tags:
-  - realworld
-subtitle: ''
+tags: realworld
+categories: statistics sampling
+giscus_comments: true
+related_posts: false
 ---
 
 This is about a math triumph during World War II. While preparations for D-Day are under way, the allies' plan is threatened by news from Italy. The Germans have rolled out a new tank model Panzer V, which threatens the superiority of allied tank thus far. This model was seen before only in small numbers but now rumors of a large fleet of them are spreading. In order to decide whether to go ahead or not with the invasion plans, the allies desperately need to know how many of these new tanks do the Germans have. Presumably if the enemy has a lot then the invasion plan has to be cancelled and redesigned. Otherwise, the plan has to be expedited before the Germans have a chance to build more. 
+
 
 The allies had capture a few of these tanks and were looking for any evidence that can help them estimate how many of them could there be, or how many are being produced. Obviously counting them all is not possible. Allied mechanics found production numbers printed on the motors and chasis of the captured tanks. Perhaps each model was numbered according to the order that it was made in, they thought. Under that assumption, what's the right estimate of the total population of tanks? The assumption turned out to be right, and the statistcal estimate the war mathematicians came up with turned out to be highly accurate. Wikipedia says *"According to conventional Allied intelligence estimates, the Germans were producing around 1,400 tanks a month between June 1940 and September 1942. Applying the formula below to the serial numbers of captured tanks, the number was calculated to be 246 a month. After the war, captured German production figures from the ministry of Albert Speer showed the actual number to be 245."*
 
 Reading about this problem, coined the German tank problem, I came across many solutions. Wikipedia even makes a distinction between the frequentist and the Bayesian answer, claiming the Bayesian answer is questionable. I had to investigate. 
 
-If the captured sample has size $S$ with numbers $x_1< x_2< ...< x_S$ what is the true population size $N$? Of course $N \geq x_S$, but can we do better? One answer [2] claims to be $\frac{(x_S-1)(S+1)}{S}$. Another formula [3] claims to be $x_S + m$ where $m$ is the average distance between all $x_{i+1} - x_i$. Another formulat [4] claims that the MLE is $x_S$.
+If the captured sample has size $$S$$ with numbers $$x_1< x_2< ...< x_S$$ what is the true population size $$N$$? Of course $$ N \geq x_S $$, but can we do better? One answer [2] claims to be $$\frac{(x_S-1)(S+1)}{S}$$. Another formula [3] claims to be $$x_S + m$$ where $$m$$ is the average distance between all $$x_{i+1} - x_i$$. Another formulat [4] claims that the MLE is $$x_S$$.
 
 The same question arises in estimating the prevelance of a disease in a population, or the size of an animal population [3].
 

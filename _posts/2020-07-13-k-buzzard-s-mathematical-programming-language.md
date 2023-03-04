@@ -2,8 +2,10 @@
 layout: post
 title: K. Buzzard's Mathematical Programming Language
 date: '2020-07-13'
-categories: math-club
-tags: []
+tags: math-club
+categories: mathematics
+giscus_comments: true
+related_posts: false
 ---
 
 Kevin Buzzard of Imperial College has started a new project of digitizing mathematical proofs. See his [site](https://leanprover.github.io/theorem_proving_in_lean/index.html). 

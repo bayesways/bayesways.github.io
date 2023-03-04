@@ -2,11 +2,8 @@
 layout: post
 title: MW Algorithm & Evolution Theory
 date: '2020-05-18'
-categories: math-club
-tags:
-  - biology
-  - computation theory
-  - evolution theory
+tags: math-club
+categories: biology computation-theory evolution-theory
 ---
 
 **Logistics** : ~~The discussion will be held on Saturday 5/30/20 at 14:00 EST (19:00 UK or 11:00 PST).~~

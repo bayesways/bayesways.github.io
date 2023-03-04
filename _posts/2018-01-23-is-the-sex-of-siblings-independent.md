@@ -1,17 +1,25 @@
 ---
-layout: post
 title: Is the sex of siblings independent?
+author: ''
 date: '2018-01-23'
-categories: realworld
+slug: is-the-sex-of-siblings-independent
+categories: []
+tags:
+  - realworld
+subtitle: ''
+output:
+  html_document:
+    toc: true
+    number_sections: true
+    fig_caption: true
+bibliography: ./sexratio.bib
 ---
 
 In this post I want to answer the question "Does the gender of the first birth affect the gender of subsequent births?".
 
 Someone told me that if two parents have a baby boy then their future babies are more likely to be boys than girls. This sounds plausible, and generally a useful thing to know. But how exactly can we test this? This question led me to study the gender ratio in general.
 
-
 $$\mathbf{Pr}( \text{boy} > 0.5) \text{ ?}$$
-
 
 It's interesting that the gender ratio, the ratio of male births over female births, is systematically above 50%, across the world and through history.  This is already surprising. Even more interestingly, this ratio fluctuates over time and appears to be affected by socioeconomic effects such as wars and biological ones, such as the parental age. 
 

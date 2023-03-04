@@ -3,10 +3,9 @@ layout: post
 title: Stephen Wolfram's New Physics
 author: ''
 date: '2020-05-03'
-categories: math-club
-tags:
-  - physics
-  - cellular automata
+tags: math-club physics cellular-automata
+giscus_comments: true
+related_posts: false
 ---
 
 **Logistics** : The first discussion will be held on Saturday 5/16/20 at 14:00 EST (19:00 UK or 11:00 PST). I will email you the zoom link. 

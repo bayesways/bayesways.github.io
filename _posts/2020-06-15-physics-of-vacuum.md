@@ -2,8 +2,9 @@
 layout: post
 title: Physics of Vacuum
 date: '2020-06-15'
-categories: math-club
-tags: []
+tags: math-club
+giscus_comments: true
+related_posts: false
 ---
 
 
