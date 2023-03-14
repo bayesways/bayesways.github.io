@@ -5,6 +5,12 @@ giscus_comments: true
 date: 2023-03-14
 related_posts: false
 ---
+
+In this post I will try to model the number of births in the US, using seasonal, day of week effects and special holiday effects. 
+The original analysis used Gaussian Processes and it presented in BDA3 and recreated in this [post](https://avehtari.github.io/casestudies/Birthdays/birthdays.html) by Aki Vehtari.
+Here I try to the same analysis but using a simpler additive model based on Fourier Transforms, implemented in the open source package [Prophet](https://facebook.github.io/prophet/) by facebook (Cuong Duong, Ben Letham, Sean Taylor).
+
+
 ```python
 import pandas as pd
 from prophet import Prophet
@@ -12,10 +18,6 @@ import altair as alt
 import holidays
 alt.data_transformers.enable('default', max_rows=None)
 ```
-
-The original analysis is in BDA3 and recreated in this [post](https://avehtari.github.io/casestudies/Birthdays/birthdays.html) by Aki Vehtari.
-Here I try to recreated it using the open source package [Prophet](https://facebook.github.io/prophet/) by facebook (Cuong Duong, Ben Letham, Sean Taylor).
-
 
 Get data
 ```python
