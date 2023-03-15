@@ -2,7 +2,7 @@
 layout: page
 permalink: /talks/
 title: talks
-description: Materials for talks and presentations I've given. Replace this text with your description.
+description: Materials for talks and presentations I've given.
 nav: true
 nav_order: 3
 ---
