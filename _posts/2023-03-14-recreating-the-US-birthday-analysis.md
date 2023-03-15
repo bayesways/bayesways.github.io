@@ -6,11 +6,20 @@ date: 2023-03-14
 related_posts: false
 ---
 
+## Background
+
 In this post I will try to model the number of births in the US, using seasonal effects, day of week effects and special holiday effects. 
-The original analysis used Gaussian Processes, it was included in BDA3 (was put on the cover of the book actually) and was recreated in this [post](https://avehtari.github.io/casestudies/Birthdays/birthdays.html) by Aki Vehtari.
+The original analysis used Gaussian Processes, it was included in BDA3 (on the cover actually). In the first version of the book the model was too big to be fit with Stan, so it was fit with a different package called `GPStuff`. [Here](https://research.cs.aalto.fi/pml/software/gpstuff/demo_births.shtml) is the code that created the materials of the book. 
 
-As described in the book, and a series of posts such as this on Andrew Gelman's [blog](https://statmodeling.stat.columbia.edu/2016/05/18/birthday-analysis-friday-the-13th-update/), the question was whether there are excess births on Valentine's day and fewer births on Halloween. This question provided an excuse to examine the effect of any holiday in the US, and more generally any day of the year. It also served as an excuse to demonstrate the use of Gaussian Processes as a time series decomposition technique. 
+Since then Stan has improved further and it looks like it is now possible to fit the original model Stan, as explained in this recent [post](https://avehtari.github.io/casestudies/Birthdays/birthdays.html) by Aki Vehtari.
 
+As described in the book, and a series of posts such as this on Andrew Gelman's [blog](https://statmodeling.stat.columbia.edu/2016/05/18/birthday-analysis-friday-the-13th-update/), the question was whether there are excess births on Valentine's day and fewer births on Halloween. This question provided an excuse to examine the effect of any holiday in the US, and more generally any day of the year. It also served as an excuse to demonstrate the use of Gaussian Processes as a time series decomposition technique.
+
+Here is the headline chart from that analys (recreated here from the gpstuff [page](https://research.cs.aalto.fi/pml/software/gpstuff/demo_births.shtml)): 
+<div class="col-sm mt-3 mt-md-0">{% include figure.html path="assets/img/2023-03-14-recreating-the-US-birthday-analysis/birthday_files/births_pic2.png" class="img-fluid rounded z-depth-1" %} </div>
+
+
+## Plan for this post
 Here I try to the same analysis but using a simpler additive model based on Fourier Transforms, instead of Gaussian Processes. 
 I am also using it as an excuse to learn how [Prophet](https://facebook.github.io/prophet/) works, a package for time series forecasting implemented by a team at facebook.
 
@@ -259,7 +268,8 @@ a = add_changepoints_to_plot(fig1.gca(), m, forecast)
     
 <div class="col-sm mt-3 mt-md-0">{% include figure.html path="assets/img/2023-03-14-recreating-the-US-birthday-analysis/birthday_files/birthday_5_0.png" class="img-fluid rounded z-depth-1" %} </div>
 
-Create the plot of all the different components. 
+Create the plot of all the different components. This is an automatic output from `Prophet` and it is fairly close to the headline chart of the original analysis. But we are missing the key chart of the day of year (see below).
+
 ```python
 fig2 = m.plot_components(forecast)
 
@@ -268,8 +278,7 @@ fig2 = m.plot_components(forecast)
 <div class="col-sm mt-3 mt-md-0">{% include figure.html path="assets/img/2023-03-14-recreating-the-US-birthday-analysis/birthday_files/birthday_6_0.png" class="img-fluid rounded z-depth-1" %} </div>
     
 
-
-And finally create the day of the year plot we were aiming for.
+And finally here we create the day of the year plot we were aiming for.
 ```python
 day_of_year_effect = forecast[['ds','each_day']].copy()
 day_of_year_effect['indicative_day'] = '1999' +'-' + day_of_year_effect['ds'].dt.month.astype(str) +'-' + day_of_year_effect['ds'].dt.day.astype(str)

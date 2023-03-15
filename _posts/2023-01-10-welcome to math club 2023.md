@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Welcom to math club 2023
+title: Welcome to math club 2023
 date: '2023-01-01'
 tags: math-club 
 giscus_comments: true
