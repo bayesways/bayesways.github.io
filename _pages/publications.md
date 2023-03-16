@@ -7,7 +7,11 @@ years: [2022,2021, 2018,2015, 2013]
 nav: true
 nav_order: 1
 ---
+
+
 <!-- _pages/publications.md -->
+For a full list refer to my [Google Scholar](https://scholar.google.com/citations?user=Po4WsHsAAAAJ&hl=en) page.
+
 <div class="publications">
 
 {%- for y in page.years %}

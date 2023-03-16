@@ -13,7 +13,7 @@ The original analysis used Gaussian Processes, it was included in BDA3 (on the c
 
 Since then Stan has improved further and it looks like it is now possible to fit the original model Stan, as explained in this recent [post](https://avehtari.github.io/casestudies/Birthdays/birthdays.html) by Aki Vehtari.
 
-As described in the book, and a series of posts such as this on Andrew Gelman's [blog](https://statmodeling.stat.columbia.edu/2016/05/18/birthday-analysis-friday-the-13th-update/), the question was whether there are excess births on Valentine's day and fewer births on Halloween. This question provided an excuse to examine the effect of any holiday in the US, and more generally any day of the year. It also served as an excuse to demonstrate the use of Gaussian Processes as a time series decomposition technique.
+As described in the book, and a series of posts such as [this](https://statmodeling.stat.columbia.edu/2016/05/18/birthday-analysis-friday-the-13th-update/) on Andrew Gelman's blog, the question was whether there are excess births on Valentine's day and fewer births on Halloween. This question provided an excuse to examine the effect of any holiday in the US, and more generally any day of the year. It also served as an excuse to demonstrate the use of Gaussian Processes as a time series decomposition technique.
 
 Here is the headline chart from that analys (recreated here from the gpstuff [page](https://research.cs.aalto.fi/pml/software/gpstuff/demo_births.shtml)): 
 <div class="col-sm mt-3 mt-md-0">{% include figure.html path="assets/img/2023-03-14-recreating-the-US-birthday-analysis/birthday_files/births_pic2.png" class="img-fluid rounded z-depth-1" %} </div>
