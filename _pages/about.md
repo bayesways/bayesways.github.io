@@ -25,6 +25,8 @@ I've held engineering and research scientist roles in industry since 2014.
 
 My academic training is in mathematics, computer science (undergraduate) and statistics (PhD).
 My most recent research work has focused on Bayesian inference techniques for factor analysis and sequential models.
+I wrote my PhD thesis on "Bayesian inference methods for latent variable modelling", you can freely download a copy at the LSE [website](https://etheses.lse.ac.uk/4380/).
+
 For a detail list of papers, slides or videos see my pages for [publications](https://bayesways.github.io/publications/) or [talks](https://bayesways.github.io/talks/). 
 
 
