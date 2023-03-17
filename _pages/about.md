@@ -19,7 +19,13 @@ social: false  # includes social icons at the bottom of the page
 ---
 
 
-I am head of Data Science at ITE Management, an alternative asset hedge fund. 
+I am head of Data Science at ITE Management, an alternative asset hedge fund and private equity firm. 
 I've held engineering and research scientist roles in industry since 2014.
-My academic training is in mathematics, computer science and statistics.
+
+
+My academic training is in mathematics, computer science (undergraduate) and statistics (PhD).
+My most recent research work has focused on Bayesian inference techniques for factor analysis and sequential models.
+For a detail list of papers, slides or videos see my pages for [publications](https://bayesways.github.io/publications/) or [talks](https://bayesways.github.io/talks/). 
+
+
 

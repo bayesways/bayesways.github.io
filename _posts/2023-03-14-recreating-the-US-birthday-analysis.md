@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Recreating the US birthday analysis
+title: Recreating the US birthday analysis with Prophet
 giscus_comments: true
 date: 2023-03-14
 related_posts: false
@@ -23,7 +23,9 @@ Here is the headline chart from that analys (recreated here from the gpstuff [pa
 Here I try to the same analysis but using a simpler additive model based on Fourier Transforms, instead of Gaussian Processes. 
 I am also using it as an excuse to learn how [Prophet](https://facebook.github.io/prophet/) works, a package for time series forecasting implemented by a team at facebook.
 
-Tha package is pretty simple to use and fast to fit. I was able to get most of the paterns right with little experimentation, though not completely right. 
+Tha package is pretty simple to use and fast to fit. I was able to get most of the paterns right with little experimentation, though not completely right. The ease of use and the ability to add custom components makes Prophet a great tool. 
+The most obvious drawback is that it's made to accommodate daily data and there is no easy way to generalize to other frequencies. 
+
 
 ## Setup
 
