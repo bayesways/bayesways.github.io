@@ -31,8 +31,10 @@ This is a running list of basic productivity tools that one can download online.
  - install [Homebrew](https://brew.sh/)
  - install oh-my-zsh [instructions](https://github.com/ohmyzsh/ohmyzsh)
  - Edit settings to pick `solarized dark` theme and `Menlo` size 14 fonts 
- - Setting up ssh key [instructions](https://docs.github.com/en/authenticationconnecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
- - Add ssh key to github [instructions](https://docs.github.com/en/authenticationconnecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
+ - Setting up ssh key [instructions](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
+ - Add ssh key to github [instructions](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
+ - install anaconda 
+ - install [pyenv](https://realpython.com/intro-to-pyenv)
 
 
 ## VSCode 
