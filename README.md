@@ -584,3 +584,7 @@ Since then, it got a full re-write of the styles and many additional cool featur
  - if not already there, add the publication year list at the top of [_pages/publications.md](https://github.com/bayesways/bayesways.github.io/blob/master/_pages/publications.md)
  - to add an image for the paper use `preview={img.gif}` and save `img.gif` in `assets/img/publication_preview/`
  
+ ## edit CV
+
+  - make edits to the page [_data/cv.yml](https://github.com/bayesways/bayesways.github.io/blob/master/_data/cv.yml)
+  - update pdf by saving a new doc at `assets/pdf/resume.pdf`
