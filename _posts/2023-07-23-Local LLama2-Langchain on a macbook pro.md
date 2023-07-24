@@ -4,7 +4,7 @@ date: 2023-07-24
 title: Local LLama2+Langchain on a macbook pro
 giscus_comments: true
 related_posts: false
-tags: 
+tags: llm
 ---
 
 In this post I will show how to build a simple LLM chain that runs completely locally on your macbook pro. Will use the latest  Llama2 models with Langchain. 
@@ -190,7 +190,7 @@ llm = LlamaCpp(
 
 # Performance 
 I was able to run it on my machine - see this [repo](https://github.com/bayesways/local_llama2_demo) for my setup. 
-I run it on a Macbook pro with an M2 Pro chip 16G RAM. The model run considerable slower with Langchain versus when prompted from the terminal. To understand why I compared the parameters used in the calls made by Langchain's `LlamaCpp` and the terminal call `main` . The only difference was the `llama_model_load_internal: mem required`. 
+I run it on a Macbook pro with an M2 Pro chip 16G RAM. The model run considerably slower with Langchain versus when prompted from the terminal. To understand why I compared the parameters used in the calls made by Langchain's `LlamaCpp` and the terminal call `main` . The only difference was the `llama_model_load_internal: mem required`. 
 
 In the terminal I got 
 ```
@@ -214,10 +214,9 @@ To download other versions you'll need to
 
 # Run in Google Colab
 
-Run in a google colab [notebook](https://colab.research.google.com/drive/11o2k1iyDCQvhp2z_0NrTlAfgKy01P60Z?usp=sharing)
-The notebook runs from start to finish in ~ 10 mins.
+If you don't have a macbook with a M2 chip or want faster performance you can run llama2 with langchain in a google colab [notebook](https://colab.research.google.com/drive/11o2k1iyDCQvhp2z_0NrTlAfgKy01P60Z?usp=sharing). I've taken the instructions from this [demo](https://twitter.com/jamescalam/status/1682766618831777794?s=61&t=Pw-aY--IwGlNpRBvUW-P9g) by James Briggs with minimal adaptations. The notebook runs from start to finish in ~ 10 mins.
 
-Note we are running the 13b parameter version to avoid hitting the GPU memory limits.
+Here we are running the 13b parameter version to avoid hitting the GPU memory limits of the free version. 
 
 You'll need 
  - To apply to use LLama2 and get approved (go [here](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and register with an email same as the one in your hugging face account)
@@ -228,5 +227,6 @@ Save the Hugging face api key in a file `secret_api_keys.env` which you'll save 
 
 ## References
 
-Llama2+Langchain [demo](https://twitter.com/jamescalam/status/1682766618831777794?s=61&t=Pw-aY--IwGlNpRBvUW-P9g) by James Briggs
-Run LLama2 on macbook pro based on three similar instructions by [Adrien Brault](https://twitter.com/AdrienBrault/status/1681503574814081025),  [Suyog Sonwalkar](https://blog.lastmileai.dev/run-llama-2-locally-in-7-lines-apple-silicon-mac-c3f46143f327) or [Abhishek Thakur](https://www.youtube.com/watch?v=Kg588OVYTiw)
+- Llama2+Langchain [demo](https://twitter.com/jamescalam/status/1682766618831777794?s=61&t=Pw-aY--IwGlNpRBvUW-P9g) by James Briggs 
+- Run LLama2 on macbook pro based on three similar instructions by [Adrien Brault](https://twitter.com/AdrienBrault/status/1681503574814081025),  [Suyog Sonwalkar](https://blog.lastmileai.dev/run-llama-2-locally-in-7-lines-apple-silicon-mac-c3f46143f327) or [Abhishek Thakur](https://www.youtube.com/watch?v=Kg588OVYTiw)
+- Langchain [documentation](https://python.langchain.com/docs/use_cases/question_answering/local_retrieval_qa) for locally run models
