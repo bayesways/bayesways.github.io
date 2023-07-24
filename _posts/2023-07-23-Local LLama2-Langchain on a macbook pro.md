@@ -180,7 +180,7 @@ llm = LlamaCpp(
     model_path="../llama.cpp/models/llama-2-7b-chat.ggmlv3.q4_K_M.bin",
     n_gpu_layers=n_gpu_layers,
     n_batch=n_batch,
-    n_ctx=2048,
+    n_ctx=512,
     f16_kv=True,  # MUST set to True, otherwise you will run into problem after a couple of calls
     callback_manager=callback_manager,
     verbose=True,
@@ -188,35 +188,59 @@ llm = LlamaCpp(
 ```
 
 
-# Performance 
-I was able to run it on my machine - see this [repo](https://github.com/bayesways/local_llama2_demo) for my setup. 
-I run it on a Macbook pro with an M2 Pro chip 16G RAM. The model run considerably slower with Langchain versus when prompted from the terminal. To understand why I compared the parameters used in the calls made by Langchain's `LlamaCpp` and the terminal call `main` . The only difference was the `llama_model_load_internal: mem required`. 
-
-In the terminal I got 
-```
-llama_model_load_internal: mem required  = 4193.33 MB (+  256.00 MB per state)
-```
-
-In Langchain I got
-```
-llama_model_load_internal: mem required  = 5563.32 MB (+ 1026.00 MB per state)
-```
-
-Will be looking into this and write an update. 
-
 # Running other LLama model versions
 
-LLama has released different versions of the models, as discussed. However to run them locally you'll need the quantized versions provided by independent developers such as TheBloke. 
+LLama has released different versions of the models, as discussed. However to run them locally you'll need the quantized versions provided by independent developers such as [TheBloke](https://huggingface.co/TheBloke). 
 
 To download other versions you'll need to
- - find the quantized version you'll need, for example go [here](https://huggingface.co/TheBloke/Llama-2-70B-GGML) for the 70B param GGML model version
+ - find the appropriate quantized version you'll need, for example go [here](https://huggingface.co/TheBloke/Llama-2-70B-GGML) for the 70B param GGML model version
  - adjust the names of the models in the commands used, for example replace `llama-2-7b-chat.ggmlv3.q4_K_M.bin`  with `llama-2-70b.ggmlv3.q4_0.bin` 
+
+For example, I was able to install the 13B chat version and ran it successfully. To do that and test that it works go to the `llama.cpp` directory (if you are not already) and do
+
+```shell
+
+curl -L https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/resolve/main/llama-2-13b-chat.ggmlv3.q4_0.bin --output ./models/llama-2-13b-chat.ggmlv3.q4_0.bin   
+LLAMA_METAL=1 make
+./main -m ./models/llama-2-13b-chat.ggmlv3.q4_0.bin -n 1024 -ngl 1 -p "recipe for avocado toast"
+```
+
+
+# Performance 
+I was able to run the 7B chat version model on my machine - see this [repo](https://github.com/bayesways/local_llama2_demo) for my setup. I ran it on a Macbook pro with an M2 Pro chip 16G RAM and it took ~1-2 seconds to generate the response. The performance you'll experience will be a function of the parameters used. To see all the parameters go to `llama.cpp` directory and do
+```
+./main --help
+```
+
+I found performance to be sensitive to the context size (`--ctx-size` in terminal, `n_ctx` in langchain) in Langchain but less so in the terminal. If you are getting a slow response try lowering the context size `n_ctx`. 
+
+Here are the performance metadata from the terminal calls for the two models: 
+
+Performance of the 7B model:
+```
+llama_print_timings:        load time =  4910.88 ms
+llama_print_timings:      sample time =   154.19 ms /   236 runs   (    0.65 ms per token,  1530.57 tokens per second)
+llama_print_timings: prompt eval time =   491.16 ms /     9 tokens (   54.57 ms per token,    18.32 tokens per second)
+llama_print_timings:        eval time =  7490.65 ms /   235 runs   (   31.88 ms per token,    31.37 tokens per second)
+llama_print_timings:       total time =  8155.16 ms
+```
+
+
+Performance of the 13B model:
+```
+llama_print_timings:        load time =  8227.97 ms
+llama_print_timings:      sample time =   331.46 ms /   506 runs   (    0.66 ms per token,  1526.60 tokens per second)
+llama_print_timings: prompt eval time =  8755.93 ms /   266 tokens (   32.92 ms per token,    30.38 tokens per second)
+llama_print_timings:        eval time = 28269.76 ms /   504 runs   (   56.09 ms per token,    17.83 tokens per second)
+llama_print_timings:       total time = 37405.66 ms
+```
+
 
 # Run in Google Colab
 
 If you don't have a macbook with a M2 chip or want faster performance you can run llama2 with langchain in a google colab [notebook](https://colab.research.google.com/drive/11o2k1iyDCQvhp2z_0NrTlAfgKy01P60Z?usp=sharing). I've taken the instructions from this [demo](https://twitter.com/jamescalam/status/1682766618831777794?s=61&t=Pw-aY--IwGlNpRBvUW-P9g) by James Briggs with minimal adaptations. The notebook runs from start to finish in ~ 10 mins.
 
-Here we are running the 13b parameter version to avoid hitting the GPU memory limits of the free version. 
+Here we are running a more complicated chain but we still use the 13b parameter version to avoid hitting the GPU memory limits of the free version. 
 
 You'll need 
  - To apply to use LLama2 and get approved (go [here](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and register with an email same as the one in your hugging face account)
