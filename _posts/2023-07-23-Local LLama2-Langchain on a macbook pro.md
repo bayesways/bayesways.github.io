@@ -60,7 +60,7 @@ llama_model_load_internal: mem required  = 4193.33 MB (+  256.00 MB per state)
 llama_new_context_with_model: kv self size  =  256.00 MB
 ggml_metal_init: allocating
 ggml_metal_init: using MPS
-ggml_metal_init: loading '/Users/Konstantinosvamvourellies/llama2/llama.cpp/ggml-metal.metal'
+ggml_metal_init: loading '/Users/Konstantinosvamvourellis/llama2/llama.cpp/ggml-metal.metal'
 ggml_metal_init: loaded kernel_add                            0x107007530
 ggml_metal_init: loaded kernel_add_row                        0x107007d60
 ggml_metal_init: loaded kernel_mul                            0x107008280
@@ -236,19 +236,19 @@ llama_print_timings:       total time = 37405.66 ms
 ```
 
 
-# Run in Google Colab
+# Run Online in Google Colab+Hugging Face
 
-If you don't have a macbook with a M2 chip or want faster performance you can run llama2 with langchain in a google colab [notebook](https://colab.research.google.com/drive/11o2k1iyDCQvhp2z_0NrTlAfgKy01P60Z?usp=sharing). I've taken the instructions from this [demo](https://twitter.com/jamescalam/status/1682766618831777794?s=61&t=Pw-aY--IwGlNpRBvUW-P9g) by James Briggs with minimal adaptations. The notebook runs from start to finish in ~ 10 mins.
+If you don't have a macbook with a M2 chip or want faster performance you can run llama2 with langchain in a google colab [notebook](https://github.com/bayesways/local_llama2_demo/blob/main/llama_2_13b_chat_agent.ipynb). I've taken the instructions from this [demo](https://twitter.com/jamescalam/status/1682766618831777794?s=61&t=Pw-aY--IwGlNpRBvUW-P9g) by James Briggs and simplified. The notebook runs from start to finish in ~ 10 mins.
 
-Here we are running a more complicated chain but we still use the 13b parameter version to avoid hitting the GPU memory limits of the free version. 
+Since we are using Google Colab the model is running on the GPUs that Google makes available as part of the Colab service. I found that 13b parameter Llama2 model runs fast and stays within the GPU memory limits of the free Colab version. The 70B parameter is worth trying but you might need to upgrade the resources and with a paid subscription for that. We also make use of the the Hugging face pipeline from Langchain which allows to run any model published in Hugging Face, which makes for more general code, but for that you will need any API key. 
 
-You'll need 
- - To apply to use LLama2 and get approved (go [here](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and register with an email same as the one in your hugging face account)
+The setup you need is as follows: 
  - Hugging face api key
+ - Save the Hugging face api key in a file `secret_api_keys.env` which you'll save in your top directory of the google drive. 
+ - To apply to use LLama2 and get approved (go [here](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and register with an email same as the one in your hugging face account)
  - Hugging face to match your Meta approval with your Hugging face email 
- 
-Save the Hugging face api key in a file `secret_api_keys.env` which you'll save in your top directory of the google drive. 
 
+  
 ## References
 
 - Llama2+Langchain [demo](https://twitter.com/jamescalam/status/1682766618831777794?s=61&t=Pw-aY--IwGlNpRBvUW-P9g) by James Briggs 
