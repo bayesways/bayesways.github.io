@@ -171,7 +171,7 @@ To run the model locally though you'll need the quantized versions of the model 
 
 # Run with Langchain
 
-To use your local model with Langchain  follow the langchain documentation [here](https://python.langchain.com/docs/use_cases/question_answering/local_retrieval_qa#llama-v2). 
+To use your local model with Langchain  follow the langchain documentation [here](https://python.langchain.com/docs/use_cases/question_answering/how_to/local_retrieval_qa#llama-v2). 
 
 Note that you'll need to pass the correct path to your model bin file in the LLamaCpp `model_path` param . For me this path was `"../llama.cpp/models/llama-2-7b-chat.ggmlv3.q4_K_M.bin"` as shown below:
 ```python
