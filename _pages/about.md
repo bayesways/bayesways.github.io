@@ -19,7 +19,7 @@ social: false  # includes social icons at the bottom of the page
 ---
 
 
-I am head of Data Science at ITE Management, an alternative asset hedge fund and private equity firm. 
+I am the Head of Data Science and Applied AI at ITE Management, an alternative asset hedge fund and private equity firm. 
 I've held engineering and research scientist roles in industry since 2014.
 
 
