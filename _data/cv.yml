@@ -65,13 +65,13 @@
   type: map
   contents:
     - name: Development
-      value: 8+ years of experience of software development in Python, 6+ years in R, familiarity with Java, Matlab, C
+      value: 10+ years of experience of software development in Python, 6+ years in R, familiarity with Java, Matlab, C
     - name: Technology
-      value: linux, git, Stan, sql, streamlit
+      value: linux, git, Stan, sql, streamlit, Pytorch, AWS, Langchain, SQL
     - name: Mathematics and Computer Science
-      value: Machine Learning/Data Science, MCMC, Bayesian Inference, Algorithms (Theory and Practice), Text Analysis, Linear Algebra, Statistics, MCMC
+      value: Machine Learning/Data Science, Machine Learning, NLP, MCMC, Bayesian Inference, Algorithms (Theory and Practice), Text Analysis, Linear Algebra, Statistics
     - name: Experience
-      value: Statistical Modeling and Simulation, Exploratory Data Analysis, Factor Modeling, Data Visualization, Text Analysis, Anomaly Detection, Algorithms Implementation and Optimization, Data Scraping, Data Engineering, Software Development and Management
+      value: NLP, Statistical Modeling and Simulation, Exploratory Data Analysis, Sentiment Analysis, Chatbots, Factor Modeling, Predictive Analytics, Data Visualization, Text Analysis, Anomaly Detection, Algorithms Implementation and Optimization, Data Scraping, Data Engineering, Software Development and Management
 
 
 - title: Selected Awards
