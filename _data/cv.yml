@@ -35,8 +35,18 @@
   type: time_table
   contents:
     - title: Data Scientist
+      institution: Biotech investment firm
+      year: 2025-present
+      description:
+        - Leading the Data Science and AI effort
+      #   - Description 2.
+      #   - title: Description 3.
+      #     contents:
+      #       - Sub-description 1.
+      #       - Sub-description 2.
+    - title: Data Scientist
       institution: ITE Management
-      year: 2017-present
+      year: 2017-2025
       description:
         - Leading the Data Science and Technology Development team
       #   - Description 2.
