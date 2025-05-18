@@ -77,7 +77,7 @@ Then I started a chat with this template
 llm chat -t copywriter
 ```
 
-Then I went back a forth a few times with the model to write different pieces of the post, one prompt at a time. I didn't get a perfect response each time, but within 5 iterations I got what I needed to put the post together. I had to edit it manually for 10 mins before completing it. 
+I went back a forth a few times with the model to write different pieces of the post, one prompt at a time. I didn't get a perfect response each time, but within 5 iterations I got what I needed to put the post together. I had to edit it manually for 10 mins before completing it. 
 
 **Tips and Modifications**
 By combining LLM features with a dictation app, you can replace typing by speaking when prompting which makes the process a lot faster. This can be particularly useful for tasks that require a lot of text input, such as writing emails, creating reports, or drafting documents. I use [Macwhisperer](https://goodsnooze.gumroad.com/l/macwhisper) which runs locally. This way I have a pipeline that runs on my laptop, for free, requires no internet access and no data leaves my computer. 
