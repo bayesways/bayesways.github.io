@@ -19,7 +19,7 @@ social: false  # includes social icons at the bottom of the page
 ---
 
 
-I work in data science and AI for a finance firm focusing on biotech. I've held engineering and research scientist roles in industry since 2014.
+I work as a data scientist for biotech investing. I've held engineering and research scientist roles in industry since 2014.
 
 My academic training is in mathematics, computer science (undergraduate) and statistics (PhD).
 My most recent research work has focused on Bayesian inference techniques for factor analysis and sequential models.
