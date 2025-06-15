@@ -1,7 +1,11 @@
 ---
 layout: post
 date: 2025-06-08
+<<<<<<< HEAD
 title: Build an MCP server
+=======
+title: How to build an MCP server
+>>>>>>> 7f66b22 (add post)
 giscus_comments: true
 related_posts: false
 tags: 
@@ -64,7 +68,7 @@ if __name__ == "__main__":
     demo.launch(mcp_server=True)
 ```
 
-~~Note that the app.py in the MCP course contains a small mistake as of today (6/11/25). The `sentiment_analysis` tool is returning a string that _looks_ like a dictionary (`"root={'polarity': 1.0, 'subjectivity': 1.0, 'assessment': 'positive'}"`) instead of returning an actual Python dictionary object. ~~
+<s>Note that the app.py in the MCP course contains a small mistake as of today (6/11/25). The `sentiment_analysis` tool is returning a string that _looks_ like a dictionary (`"root={'polarity': 1.0, 'subjectivity': 1.0, 'assessment': 'positive'}"`) instead of returning an actual Python dictionary object.</s>
 I opened a PR for this and it was accepted so this has now been corrected. 
 
 
@@ -114,7 +118,8 @@ python mcp_client.py
 Open the client from a browser at http://127.0.0.1:7861/ and ask it for a sentiment, e.g. Analyze the sentiment of the following text "This is awesome"
 
 Then inspect the terminal running the client. It tells you how it's trying to use the tool. Interestingly the agent made an error but corrected itself and got the right answer. 
-![[Screenshot 2025-06-10 at 21.15.10.png]]
+<div class="col-sm mt-3 mt-md-0">{% include figure.html path="assets/img/2025-06-15-How to build your own MCP server and research agent/Screenshot 2025-06-10 at 21.15.10.png" class="img-fluid rounded z-depth-1" %} </div>
+
 
 Pretty cool. 
 
@@ -126,7 +131,8 @@ The MCP server is a relatively simple function. The function does two things: ex
 
 I asked it 
 ```
-Go to [https://huggingface.co/learn/mcp-course/unit1/introduction](https://huggingface.co/learn/mcp-course/unit1/introduction) and tell me what are the prerequisites for this course
+Go to https://huggingface.co/learn/mcp-course/unit1/introduction
+and tell me what are the prerequisites for this course
 ```
 
 and it answered correctly 
@@ -139,10 +145,11 @@ and it answered correctly
 The answer comes from a segment of [unit 0](https://huggingface.co/learn/mcp-course/unit0/introduction) which is different that the link I provided in my question. So the agent must have found its way to unit 0 to give the right answer. Interestingly, when I asked it again the same question it answered with "No specific prerequisites mentioned, but basic understanding of AI and programming would be helpful." In this case case the agent did not visit another url so it answered based on the info in unit 1 which is incorrect.
 
 Other usecases would be looking for some specific information at a website, or looking to find a specific item from an online store. For example I asked to 
-```bash
-Give me a list of 10 art studios in Red Hook NY from this website  https://newyork.craigslist.org/search/hhh?query=art%20studio%20redhook#search=2~gallery~0
 ```
-it returned a decent list. The full logs are available [here](https://raw.githubusercontent.com/bayesways/my-mcp-app/refs/heads/main/server_output_3.md?token=GHSAT0AAAAAADD6X3IHXFF4XQAZUERUQ5CY2CO7MWA) 
+Give me a list of 10 art studios in Red Hook NY from this website
+https://newyork.craigslist.org/search/hhh?query=art%20studio%20redhook#search=2~gallery~0
+```
+it returned a decent list. The full logs are available [here](https://raw.githubusercontent.com/bayesways/my-mcp-app/refs/heads/main/server_output_3.md) 
 
 ## References
 
