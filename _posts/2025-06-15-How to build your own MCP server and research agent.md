@@ -145,7 +145,7 @@ Other usecases would be looking for some specific information at a website, or l
 Give me a list of 10 art studios in Red Hook NY from this website
 https://newyork.craigslist.org/search/hhh?query=art%20studio%20redhook#search=2~gallery~0
 ```
-it returned a decent list. The full logs are available [here](https://raw.githubusercontent.com/bayesways/my-mcp-app/refs/heads/main/server_output_3.md) 
+it returned a decent list. The full logs are available [here](https://raw.githubusercontent.com/bayesways/my-mcp-app/refs/heads/main/server_output_3.md).
 
 ## References
 
