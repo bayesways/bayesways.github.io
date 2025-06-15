@@ -1,7 +1,7 @@
 ---
 layout: post
 date: 2025-06-08
-title: How to build an MCP server
+title: How to build an MCP server and research agent
 giscus_comments: true
 related_posts: false
 tags: 
