@@ -119,7 +119,7 @@ Then inspect the terminal running the client. It tells you how it's trying to us
 
 Pretty cool. 
 
-Now it's time to build something a little more useful. While I was reading the course I found myself needing to search for information I had read but could not remember in which specific chapter. A perfect job for an agent. So let's see how we can build this. 
+Now it's time to build something a little more useful. While I was reading the course I found myself needing to search for information I had read but could not remember in which specific chapter. A perfect job for an agent. So let's see how we can build this. You can find the code [here](https://github.com/bayesways/my-mcp-app).
 
 Drawing inspiration by this [repo](https://github.com/willccbb/research-agent-lesson) by Will Brown, I decided to implement the idea based on a simple fetching tool which takes in a url and iteratively explores the links in it to search for the answer to our question. For example if I wanted to know what packages we need to install for the Hugging Face course I can give the agent the url of the course and let it find the answer. 
 
