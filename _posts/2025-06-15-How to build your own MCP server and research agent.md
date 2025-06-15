@@ -1,11 +1,7 @@
 ---
 layout: post
 date: 2025-06-08
-<<<<<<< HEAD
-title: Build an MCP server
-=======
 title: How to build an MCP server
->>>>>>> 7f66b22 (add post)
 giscus_comments: true
 related_posts: false
 tags: 
