@@ -1,0 +1,1160 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://bayesways.github.io/feed.xml" rel="self" type="application/atom+xml"/><link href="https://bayesways.github.io/" rel="alternate" type="text/html" hreflang="en"/><updated>2025-06-18T20:35:22+00:00</updated><id>https://bayesways.github.io/feed.xml</id><title type="html">blank</title><subtitle>A simple, whitespace theme for academics. Based on [*folio](https://github.com/bogoli/-folio) design. </subtitle><entry><title type="html">How to build an MCP server and research agent</title><link href="https://bayesways.github.io/blog/2025/How-to-build-your-own-MCP-server-and-research-agent/" rel="alternate" type="text/html" title="How to build an MCP server and research agent"/><published>2025-06-08T00:00:00+00:00</published><updated>2025-06-08T00:00:00+00:00</updated><id>https://bayesways.github.io/blog/2025/How%20to%20build%20your%20own%20MCP%20server%20and%20research%20agent</id><content type="html" xml:base="https://bayesways.github.io/blog/2025/How-to-build-your-own-MCP-server-and-research-agent/"><![CDATA[<p>Inspired by the Huggingface MCP <a href="https://huggingface.co/learn/mcp-course/unit1/introduction">course</a>, I decided to build an MCP application.</p> <p>I started by replicating an example from the course to ensure that it works. The MCP server implements a sentiment analysis function and the client is an agent that has access to the tool. Below is how I got it to run.</p> <p>Note this will run on the Inference Providers on HF. You get a $ 0.10 credits with a free account which is enough to run this agent a few times but you will soon get an error “You have exceeded your monthly included credits for Inference Providers. Subscribe to PRO to get 20x more monthly included credits.” You can purchase more in your settings <a href="https://huggingface.co/settings/billing/subscription">page</a>. I had to subscribe for a month to experiment with this. In a future post I plan to look at running this locally.</p> <h1 id="toy-example-of-mcp-server---client">Toy Example of MCP Server - Client</h1> <p>Set up a <a href="https://bayesways.github.io/blog/2025/How-I-set-up-my-project-repositories/">standard repo</a> and install the following packages</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>pip <span class="nb">install</span> <span class="s2">"smolagents[mcp]"</span> <span class="s2">"gradio[mcp]"</span> mcp fastmcp textblob
+</pre></td></tr></tbody></table></code></pre></div></div> <p>Save a <code class="language-plaintext highlighter-rouge">.env</code> file</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>HUGGINGFACE_API_TOKEN=&lt;yourHuggingFaceToken&gt;
+</pre></td></tr></tbody></table></code></pre></div></div> <p>you can get one from your <a href="https://huggingface.co/settings/tokens">settings</a> page.</p> <p>Save the <code class="language-plaintext highlighter-rouge">mcp_server.py</code></p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+</pre></td><td class="rouge-code"><pre><span class="kn">import</span> <span class="n">gradio</span> <span class="k">as</span> <span class="n">gr</span>
+<span class="kn">from</span> <span class="n">textblob</span> <span class="kn">import</span> <span class="n">TextBlob</span>
+
+<span class="k">def</span> <span class="nf">sentiment_analysis</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="sh">"""</span><span class="s">
+    Analyze the sentiment of the given text.
+
+    Args:
+        text (str): The text to analyze
+
+    Returns:
+        dict: A dictionary containing polarity, subjectivity, and assessment
+    </span><span class="sh">"""</span>
+    <span class="n">blob</span> <span class="o">=</span> <span class="nc">TextBlob</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">sentiment</span> <span class="o">=</span> <span class="n">blob</span><span class="p">.</span><span class="n">sentiment</span>
+    
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="sh">"</span><span class="s">polarity</span><span class="sh">"</span><span class="p">:</span> <span class="nf">round</span><span class="p">(</span><span class="n">sentiment</span><span class="p">.</span><span class="n">polarity</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>  <span class="c1"># -1 (negative) to 1 (positive)
+</span>        <span class="sh">"</span><span class="s">subjectivity</span><span class="sh">"</span><span class="p">:</span> <span class="nf">round</span><span class="p">(</span><span class="n">sentiment</span><span class="p">.</span><span class="n">subjectivity</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>  <span class="c1"># 0 (objective) to 1 (subjective)
+</span>        <span class="sh">"</span><span class="s">assessment</span><span class="sh">"</span><span class="p">:</span> <span class="sh">"</span><span class="s">positive</span><span class="sh">"</span> <span class="k">if</span> <span class="n">sentiment</span><span class="p">.</span><span class="n">polarity</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="sh">"</span><span class="s">negative</span><span class="sh">"</span> <span class="k">if</span> <span class="n">sentiment</span><span class="p">.</span><span class="n">polarity</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="sh">"</span><span class="s">neutral</span><span class="sh">"</span>
+    <span class="p">}</span>
+
+<span class="c1"># Create the Gradio interface
+</span><span class="n">demo</span> <span class="o">=</span> <span class="n">gr</span><span class="p">.</span><span class="nc">Interface</span><span class="p">(</span>
+    <span class="n">fn</span><span class="o">=</span><span class="n">sentiment_analysis</span><span class="p">,</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="n">gr</span><span class="p">.</span><span class="nc">Textbox</span><span class="p">(</span><span class="n">placeholder</span><span class="o">=</span><span class="sh">"</span><span class="s">Enter text to analyze...</span><span class="sh">"</span><span class="p">),</span>
+    <span class="n">outputs</span><span class="o">=</span><span class="n">gr</span><span class="p">.</span><span class="nc">JSON</span><span class="p">(),</span>
+    <span class="n">title</span><span class="o">=</span><span class="sh">"</span><span class="s">Text Sentiment Analysis</span><span class="sh">"</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="sh">"</span><span class="s">Analyze the sentiment of text using TextBlob</span><span class="sh">"</span>
+<span class="p">)</span>
+
+<span class="c1"># Launch the interface and MCP server
+</span><span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="sh">"</span><span class="s">__main__</span><span class="sh">"</span><span class="p">:</span>
+    <span class="n">demo</span><span class="p">.</span><span class="nf">launch</span><span class="p">(</span><span class="n">mcp_server</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <s>Note that the app.py in the MCP course contains a small mistake as of today (6/11/25). The `sentiment_analysis` tool is returning a string that _looks_ like a dictionary (`"root={'polarity': 1.0, 'subjectivity': 1.0, 'assessment': 'positive'}"`) instead of returning an actual Python dictionary object.</s> <p>I opened a PR for this and it was accepted so this has now been corrected.</p> <p>Save the <code class="language-plaintext highlighter-rouge">mcp_client.py</code></p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+</pre></td><td class="rouge-code"><pre><span class="kn">import</span> <span class="n">gradio</span> <span class="k">as</span> <span class="n">gr</span>
+<span class="kn">import</span> <span class="n">os</span>
+
+<span class="kn">from</span> <span class="n">mcp</span> <span class="kn">import</span> <span class="n">StdioServerParameters</span>
+<span class="kn">from</span> <span class="n">smolagents</span> <span class="kn">import</span> <span class="n">InferenceClientModel</span><span class="p">,</span> <span class="n">CodeAgent</span><span class="p">,</span> <span class="n">ToolCollection</span><span class="p">,</span> <span class="n">MCPClient</span>
+
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">mcp_client</span> <span class="o">=</span> <span class="nc">MCPClient</span><span class="p">(</span>
+        <span class="p">{</span><span class="sh">"</span><span class="s">url</span><span class="sh">"</span><span class="p">:</span> <span class="sh">"</span><span class="s">http://localhost:7860/gradio_api/mcp/sse</span><span class="sh">"</span><span class="p">}</span> <span class="c1"># This is the MCP Server we created in the previous section
+</span>    <span class="p">)</span>
+    <span class="n">tools</span> <span class="o">=</span> <span class="n">mcp_client</span><span class="p">.</span><span class="nf">get_tools</span><span class="p">()</span>
+
+    <span class="n">model</span> <span class="o">=</span> <span class="nc">InferenceClientModel</span><span class="p">(</span><span class="n">token</span><span class="o">=</span><span class="n">os</span><span class="p">.</span><span class="nf">getenv</span><span class="p">(</span><span class="sh">"</span><span class="s">HUGGINGFACE_API_TOKEN</span><span class="sh">"</span><span class="p">))</span>
+    <span class="n">agent</span> <span class="o">=</span> <span class="nc">CodeAgent</span><span class="p">(</span><span class="n">tools</span><span class="o">=</span><span class="p">[</span><span class="o">*</span><span class="n">tools</span><span class="p">],</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
+
+    <span class="n">demo</span> <span class="o">=</span> <span class="n">gr</span><span class="p">.</span><span class="nc">ChatInterface</span><span class="p">(</span>
+        <span class="n">fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">message</span><span class="p">,</span> <span class="n">history</span><span class="p">:</span> <span class="nf">str</span><span class="p">(</span><span class="n">agent</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span><span class="n">message</span><span class="p">)),</span>
+        <span class="nb">type</span><span class="o">=</span><span class="sh">"</span><span class="s">messages</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">examples</span><span class="o">=</span><span class="p">[</span><span class="sh">"</span><span class="s">Analyze the sentiment of the following text </span><span class="sh">'</span><span class="s">This is awesome</span><span class="sh">'"</span><span class="p">],</span>
+        <span class="n">title</span><span class="o">=</span><span class="sh">"</span><span class="s">Agent with MCP Tools</span><span class="sh">"</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="sh">"</span><span class="s">This is a simple agent that uses MCP tools to answer questions.</span><span class="sh">"</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">demo</span><span class="p">.</span><span class="nf">launch</span><span class="p">()</span>
+<span class="k">finally</span><span class="p">:</span>
+    <span class="n">mcp_client</span><span class="p">.</span><span class="nf">disconnect</span><span class="p">()</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <p>To run the agent first open a terminals and start the server</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre></td><td class="rouge-code"><pre><span class="nb">source </span>venv/bin/activate
+python mcp_server.py
+</pre></td></tr></tbody></table></code></pre></div></div> <p>Then open an another terminal and start the client</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre></td><td class="rouge-code"><pre><span class="nb">source </span>venv/bin/activate
+python mcp_client.py
+</pre></td></tr></tbody></table></code></pre></div></div> <p>Open the client from a browser at http://127.0.0.1:7861/ and ask it for a sentiment, e.g. Analyze the sentiment of the following text “This is awesome”</p> <p>Then inspect the terminal running the client. It tells you how it’s trying to use the tool. Interestingly the agent made an error but corrected itself and got the right answer.</p> <div class="col-sm mt-3 mt-md-0"><figure> <picture> <source class="responsive-img-srcset" media="(max-width: 480px)" srcset="/assets/img/2025-06-15-How%20to%20build%20your%20own%20MCP%20server%20and%20research%20agent/Screenshot%202025-06-10%20at%2021.15.10-480.webp"/> <source class="responsive-img-srcset" media="(max-width: 800px)" srcset="/assets/img/2025-06-15-How%20to%20build%20your%20own%20MCP%20server%20and%20research%20agent/Screenshot%202025-06-10%20at%2021.15.10-800.webp"/> <source class="responsive-img-srcset" media="(max-width: 1400px)" srcset="/assets/img/2025-06-15-How%20to%20build%20your%20own%20MCP%20server%20and%20research%20agent/Screenshot%202025-06-10%20at%2021.15.10-1400.webp"/> <img src="/assets/img/2025-06-15-How%20to%20build%20your%20own%20MCP%20server%20and%20research%20agent/Screenshot%202025-06-10%20at%2021.15.10.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"/> </picture> </figure> </div> <p>Pretty cool.</p> <h1 id="how-does-it-work">How does it work?</h1> <p>Setting up the server is made easy with Gradio via the <code class="language-plaintext highlighter-rouge">mcp_server=True</code> flag on line 34 of <code class="language-plaintext highlighter-rouge">mcp_server.py</code>. When you call <code class="language-plaintext highlighter-rouge">demo.launch(mcp_server=True)</code>, Gradio does several MCP-related things for you automatically:</p> <ul> <li>Function Discovery: It scans your Gradio interface and finds the function we passed to <code class="language-plaintext highlighter-rouge">gr.Interface(fn=sentiment_analysis, ...)</code> on lines 24-25.</li> <li>Tool Registration: It automatically registers this function as an MCP tool with: <ul> <li>The function name as the tool name</li> <li>The function’s docstring as the tool description</li> <li>The function’s parameters and return type as the tool schema</li> </ul> </li> <li>MCP Server Creation: It creates an MCP server that exposes these tools via the standard MCP protocol</li> </ul> <p>Gradio makes it easy to turn a function into an MCP server if you know how to set it as a Gradio interface, which is simple. Plus you get a helpful UI in your browser to explore the MCP server (see the little option “Use via API or MCP” at the bottom of the Gradio UI and find the MCP tab).</p> <p>Now, the client connects to the MCP endpoint (lines 9-11 in <code class="language-plaintext highlighter-rouge">mcp_client.py</code> ) and retrieves all available tools (line 12). This is made easy for us by the <code class="language-plaintext highlighter-rouge">smolagents</code> library that implements the specific <code class="language-plaintext highlighter-rouge">get_tools()</code> method we use here.</p> <p>If instead of the server we wrote we wanted to connect to another MCP server we would only need to change line 10 of the <code class="language-plaintext highlighter-rouge">mcp_client.py</code>.</p> <h1 id="basic-research-agent">Basic Research Agent</h1> <p>Now it’s time to build something a little more useful. While I was reading the course I found myself needing to search for information I had read but could not remember in which specific chapter. A perfect job for an agent. So let’s see how we can build this. You can find the code <a href="https://github.com/bayesways/my-mcp-app">here</a>.</p> <p>Drawing inspiration by this <a href="https://github.com/willccbb/research-agent-lesson">repo</a> by Will Brown, I decided to implement the idea based on a simple fetching tool which takes in a url and iteratively explores the links in it to search for the answer to our question. For example if I wanted to know what packages we need to install for the Hugging Face course I can give the agent the url of the course and let it find the answer.</p> <p>The MCP server is a relatively simple function. The function does two things: extracts the text of the webpage into a clean markdown and collects all the links within the page. It provides the output in a structured format to be readable by the agent. The agent reads the output and has two options: answer our question based on the info so far or call the tool at its disposal with a new url. Doing this iteratively the agent can collect info on the websites that it has visited until it has enough context to answer.</p> <p>I asked it</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre></td><td class="rouge-code"><pre>Go to https://huggingface.co/learn/mcp-course/unit1/introduction
+and tell me what are the prerequisites for this course
+</pre></td></tr></tbody></table></code></pre></div></div> <p>and it answered correctly</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre></td><td class="rouge-code"><pre>- Basic understanding of AI and LLM concepts
+- Familiarity with software development principles and API concepts
+- Experience with at least one programming language (Python or TypeScript examples will be shown)
+</pre></td></tr></tbody></table></code></pre></div></div> <p>The answer comes from a segment of <a href="https://huggingface.co/learn/mcp-course/unit0/introduction">unit 0</a> which is different that the link I provided in my question. So the agent must have found its way to unit 0 to give the right answer. Interestingly, when I asked it again the same question it answered with “No specific prerequisites mentioned, but basic understanding of AI and programming would be helpful.” In this case case the agent did not visit another url so it answered based on the info in unit 1 which is incorrect.</p> <p>Other usecases would be looking for some specific information at a website, or looking to find a specific item from an online store. For example I asked to</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre></td><td class="rouge-code"><pre>Give me a list of 10 art studios in Red Hook NY from this website
+https://newyork.craigslist.org/search/hhh?query=art%20studio%20redhook#search=2~gallery~0
+</pre></td></tr></tbody></table></code></pre></div></div> <p>it returned a decent list. The full logs are available <a href="https://raw.githubusercontent.com/bayesways/my-mcp-app/refs/heads/main/server_output_3.md">here</a>.</p> <h1 id="qa">Q&amp;A</h1> <h2 id="i-tried-demolaunchmcp_servertrue-but-it-doesnt-work">I tried <code class="language-plaintext highlighter-rouge">demo.launch(mcp_server=True)</code> but it doesn’t work.</h2> <p>For some reason I don’t totally understand I had to explicitly set <code class="language-plaintext highlighter-rouge">export GRADIO_MCP_SERVER=True</code> in the terminal to get it to actually set up the MCP server when I run it for the first time.</p> <h2 id="how-to-define-more-than-one-tools-per-server">How to define more than one tools per server?</h2> <p>Note that argument <code class="language-plaintext highlighter-rouge">fn</code> on line 25 of <code class="language-plaintext highlighter-rouge">mcp_server.py</code> does not support a list. You can still expose multiple tools in one server though. You create one interface per tool and then combine them before launching as shown below.</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+</pre></td><td class="rouge-code"><pre><span class="n">tool_1_interface</span> <span class="o">=</span> <span class="n">gr</span><span class="p">.</span><span class="nc">Interface</span><span class="p">(</span>
+    <span class="n">fn</span><span class="o">=</span><span class="n">sentiment_analysis</span><span class="p">,</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="n">gr</span><span class="p">.</span><span class="nc">Textbox</span><span class="p">(</span><span class="n">placeholder</span><span class="o">=</span><span class="sh">"</span><span class="s">Enter text to analyze...</span><span class="sh">"</span><span class="p">),</span>
+    <span class="n">outputs</span><span class="o">=</span><span class="n">gr</span><span class="p">.</span><span class="nc">JSON</span><span class="p">(),</span>
+    <span class="n">title</span><span class="o">=</span><span class="sh">"</span><span class="s">Text Sentiment Analysis</span><span class="sh">"</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="sh">"</span><span class="s">Analyze the sentiment of text using TextBlob</span><span class="sh">"</span>
+<span class="p">)</span>
+<span class="n">tool_2_interface</span> <span class="o">=</span> <span class="n">gr</span><span class="p">.</span><span class="nc">Interface</span><span class="p">(</span>
+    <span class="n">fn</span><span class="o">=</span><span class="n">text_summarizer</span><span class="p">,</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="n">gr</span><span class="p">.</span><span class="nc">Textbox</span><span class="p">(</span><span class="n">placeholder</span><span class="o">=</span><span class="sh">"</span><span class="s">Enter text to summarize...</span><span class="sh">"</span><span class="p">),</span>
+    <span class="n">outputs</span><span class="o">=</span><span class="n">gr</span><span class="p">.</span><span class="nc">JSON</span><span class="p">(),</span>
+    <span class="n">title</span><span class="o">=</span><span class="sh">"</span><span class="s">Text Summary Generator</span><span class="sh">"</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="sh">"</span><span class="s">Summarize a text</span><span class="sh">"</span>
+<span class="p">)</span>
+
+<span class="c1"># Combine all interfaces into a tabbed interface
+</span><span class="n">demo</span> <span class="o">=</span> <span class="n">gr</span><span class="p">.</span><span class="nc">TabbedInterface</span><span class="p">(</span>
+    <span class="p">[</span><span class="n">tool_1_interface</span><span class="p">,</span> <span class="n">tool_2_interface</span><span class="p">],</span>
+    <span class="p">[</span><span class="sh">"</span><span class="s">Sentiment Analysis</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">Text Summarizer</span><span class="sh">"</span><span class="p">]</span>
+<span class="p">)</span>
+
+<span class="c1"># Launch with MCP server enabled
+</span><span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="sh">"</span><span class="s">__main__</span><span class="sh">"</span><span class="p">:</span>
+    <span class="n">demo</span><span class="p">.</span><span class="nf">launch</span><span class="p">(</span><span class="n">mcp_server</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <h2 id="what-does-get_tools-actually-do">What does <code class="language-plaintext highlighter-rouge">get_tools()</code> actually do?</h2> <p>When we call <code class="language-plaintext highlighter-rouge">get_tools()</code>, here’s what happens behind the scenes:</p> <ul> <li>Client Request: The MCP client sends a <code class="language-plaintext highlighter-rouge">tools/list</code> message to the server</li> <li>Server Response: The server responds with a list of available tools in this format: <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+</pre></td><td class="rouge-code"><pre><span class="p">{</span><span class="w">
+  </span><span class="nl">"jsonrpc"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2.0"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"result"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+ </span><span class="nl">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+   </span><span class="p">{</span><span class="w">
+     </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sentiment_analysis"</span><span class="p">,</span><span class="w">
+     </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Analyze the sentiment of the given text"</span><span class="p">,</span><span class="w">
+     </span><span class="nl">"inputSchema"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+       </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"object"</span><span class="p">,</span><span class="w">
+       </span><span class="nl">"properties"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+         </span><span class="nl">"text"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"The text to analyze"</span><span class="p">}</span><span class="w">
+       </span><span class="p">},</span><span class="w">
+       </span><span class="nl">"required"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span><span class="w">
+     </span><span class="p">}</span><span class="w">
+   </span><span class="p">}</span><span class="w">
+ </span><span class="p">]</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></pre></td></tr></tbody></table></code></pre></div> </div> </li> <li>Client Processing: The <code class="language-plaintext highlighter-rouge">MCPClient.get_tools()</code> method parses this JSON response and converts each tool definition into tool objects that your agent can use.</li> </ul> <p>The MCPClient class (from <code class="language-plaintext highlighter-rouge">smolagents</code>) implements the MCP client specification, which includes:</p> <ul> <li>Connection management: Connecting to MCP servers via different transports (HTTP SSE, stdio, etc.)</li> <li>Protocol handling: Sending/receiving MCP messages in the correct JSON-RPC format</li> <li>Tool discovery: The <code class="language-plaintext highlighter-rouge">get_tools()</code> method that sends <code class="language-plaintext highlighter-rouge">tools/list</code> requests</li> <li>Tool execution: Methods to call tools via <code class="language-plaintext highlighter-rouge">tools/call</code> requests</li> </ul> <p>and these should work with any MCP server, not just the Gradio server we wrote. That’s the point of MCP, to provide a standardized way to connect AI models to external tools and data sources. Which means:</p> <ul> <li>Standardization: Any MCP client can work with any MCP server</li> <li>Discoverability: Clients can automatically discover what tools are available</li> <li>Flexibility: Tools can be added/removed dynamically</li> <li>Security: The protocol includes mechanisms for safe tool execution</li> </ul> <h2 id="whats-the-significance-of-sse">What’s the significance of <code class="language-plaintext highlighter-rouge">sse</code>?</h2> <p>SSE stands for Server-Sent Events - it’s the transport protocol that our MCP client is using to communicate with the Gradio MCP server in this example.</p> <p>More generally MCP specifies how messages are transported between Clients and Servers. Two primary transport mechanisms are supported:</p> <ul> <li><strong>stdio (Standard Input/Output)</strong> used for local communication, where the Client and Server run on the same machine</li> <li><strong>HTTP + SSE (Server-Sent Events) / Streamable HTTP</strong> used for remote communication, where the Client and Server might be on different machines.</li> </ul> <p>There are more protocols supported but exploring them further is a topic for another post. The MCP course on Hugging Face contains more info on this.</p> <p>SSE/Streamable HTTP is the standard choice for most AI/ML applications because:</p> <ul> <li>Long-running operations: AI models can take time, SSE allows progress updates</li> <li>Streaming responses: Perfect for streaming text generation or real-time analysis</li> <li>Resource monitoring: Server can notify clients when resources change</li> <li>Connection persistence: Maintains connection for multiple interactions</li> </ul> <p>One last thing, if you run the code you will get a warning</p> <p><em>“specifying the ‘transport’ key is deprecated. For now, it defaults to the legacy ‘sse’ (HTTP+SSE) transport, but this default will change to ‘streamable-http’ in version 1.20. Please add the ‘transport’ key explicitly.”</em></p> <p>The streamable-http transport will become the default in version 1.20 of the <code class="language-plaintext highlighter-rouge">mcp</code> library (as of today we are on 1.9) so to avoid the warning use</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+</pre></td><td class="rouge-code"><pre><span class="n">mcp_client</span> <span class="o">=</span> <span class="nc">MCPClient</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="sh">"</span><span class="s">url</span><span class="sh">"</span><span class="p">:</span> <span class="sh">"</span><span class="s">http://localhost:7860/gradio_api/mcp/sse</span><span class="sh">"</span><span class="p">,</span> 
+        <span class="sh">"</span><span class="s">transport</span><span class="sh">"</span><span class="p">:</span> <span class="sh">"</span><span class="s">sse</span><span class="sh">"</span> <span class="c1"># "streamable-http" is also fine
+</span>    <span class="p">}</span>
+<span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <h2 id="references">References</h2> <ul> <li><a href="https://huggingface.co/learn/mcp-course/unit0/introduction">Hugging Face MCP Course</a></li> <li><a href="https://huggingface.co/blog/gradio-mcp">How to Build an MCP Server in 5 Lines of Python</a></li> <li>Will Brown’s research agent <a href="https://github.com/willccbb/research-agent-lesson">repo</a></li> </ul>]]></content><author><name></name></author><category term="llm"/><category term="mcp"/><summary type="html"><![CDATA[Inspired by the Huggingface MCP course, I decided to build an MCP application.]]></summary></entry><entry><title type="html">How to try different llm models</title><link href="https://bayesways.github.io/blog/2025/How-I-experiment-with-different-LLM-models/" rel="alternate" type="text/html" title="How to try different llm models"/><published>2025-05-16T00:00:00+00:00</published><updated>2025-05-16T00:00:00+00:00</updated><id>https://bayesways.github.io/blog/2025/How%20I%20experiment%20with%20different%20LLM%20models</id><content type="html" xml:base="https://bayesways.github.io/blog/2025/How-I-experiment-with-different-LLM-models/"><![CDATA[<h3 id="why-llm-is-a-great-package-for-automation-and-productivity">Why LLM is a Great Package for Automation and Productivity</h3> <p>The <a href="https://llm.datasette.io/en/stable/index.html">LLM package by Simon Willison</a> offers a unique combination of features that make it an ideal tool for research, automation and productivity. Kudos to Simon for making such a powerful piece of software. In this article, I’ll explore three reasons to use it.</p> <h3 id="reason-1-easy-experimentation-with-different-llms">Reason 1: Easy Experimentation with Different LLMs</h3> <p>One of the most significant benefits of the LLM package (LLM) is its ability to make it easy to experiment with different LLM models. With LLM, you can store all your results and revisit them later to examine differences or find answers to questions you’ve previously asked. This feature is particularly useful for exploring the capabilities of different LLMs and identifying the best one for your specific use case.</p> <p>There are other good ways to run different llm models online, such as <a href="https://app.hyperbolic.xyz">hyperbolic</a> or hugging face <a href="https://huggingface.co/playground">inference playground</a>, and some to run them locally, such as <a href="https://lmstudio.ai/">LM Studio</a>. And of course there are all the chatbot interfaces from OpenAI, Anthropic, Google AI Studio etc. which are truly fantastic products. But if you are interested in trying them all out, there are actually too many places which makes tracking your usage too hard. The LLM package solves this problem for me to a good degree. I use it to interact with all the API services and all open source models including all local models. This way I am capturing all the interactions automatically. All prompts and outputs are <a href="https://llm.datasette.io/en/stable/logging.html">stored automatically</a> in a local database together with all the metadata. LLM has a variety of plugins for many API services and local inference frameworks. For the rare occasion that there is an API that is not covered, you can write your own plugin (Simon has kindly provided a detailed guide on how to do exactly that - and if you do, others will benefit too!). What I cannot capture are my interactions with ChatGPT or other chatbot interfaces, but at least for those there is a history saved on the interface.</p> <h3 id="reason-2-easy-local-model-running">Reason 2: Easy Local Model Running</h3> <p>LLM also makes it very easy to run models locally on your computer. With LLM, you can access a wide range of local inference frameworks, all within a single package. Each one is made available via an <code class="language-plaintext highlighter-rouge">llm</code>-plugin that can be easily installed via <code class="language-plaintext highlighter-rouge">pip</code>. You can find the full list <a href="https://llm.datasette.io/en/stable/plugins/directory.html">here</a>. This feature is particularly useful for those who want to run models on their own computer without incurring costs or relying on external cloud services. No API keys or wifi needed. What is more, all data stays with the user, which is something I appreciate a lot. Below I am showing how to run <a href="https://huggingface.co/mlx-community/Llama-3.2-3B-Instruct-4bit">Llama3-3B-4bit</a> locally. This model is powerful enough for common tasks, yet small and very performant. Combined with the mlx inference framework it is possible to run this model easily on the background without having your computer slow down if you are running your regular apps in parallel.</p> <p><strong>Running Lama3 Locally on Your Mac</strong> <strong>System Requirements</strong></p> <ul> <li>Mac Pro (or a MacBook Pro machine)</li> <li>Local folder with virtual environment and local python version 3.12. We specifically need 3.12 and not higher. See my notes on <a href="2025-05-14-How I set up my project repositories.md">“How I set up my project repositories”</a>.</li> <li>Enter your project repo and activate the virtual environment</li> </ul> <p><strong>Step 1: Install llm</strong> Follow the <a href="https://llm.datasette.io/en/stable/setup.html">instructions</a> for setting up llm. Inside the virtual environment we can use pip.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>pip <span class="nb">install </span>llm
+</pre></td></tr></tbody></table></code></pre></div></div> <p><strong>Step 2: Install llm-mlx</strong> Follow the <a href="https://github.com/simonw/llm-mlx?tab=readme-ov-file">instructions</a> of the llm-mlx plugin. Since we have setup our virtual environment with python 3.12 already we don’t need to follow the special instructions listed. The following one line will do.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>llm <span class="nb">install </span>llm-mlx
+</pre></td></tr></tbody></table></code></pre></div></div> <p><strong>Step 3: Install the Llama model</strong> This will take a minute or two to download.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>llm mlx download-model mlx-community/Llama-3.2-3B-Instruct-4bit
+</pre></td></tr></tbody></table></code></pre></div></div> <p><strong>Step 4: Test it out</strong> Try prompting the model with a simple query</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>llm <span class="nt">-m</span> mlx-community/Llama-3.2-3B-Instruct-4bit <span class="s1">'Capital of France?'</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <ul> <li>You can run other local models as listed on the <a href="llm -m mlx-community/Llama-3.2-3B-Instruct-4bit" title="Capital of France?' -s 'you are a pelican">repo</a> of the plugin on github</li> <li>To delete a downloaded model amd free space on your computer follow the instructions <a href="https://github.com/simonw/llm-mlx/issues/14">here</a></li> </ul> <h3 id="reason-3-customizable-workflows-in-the-terminal">Reason 3: Customizable Workflows in the Terminal</h3> <p>Finally, the fact that LLM is integrated into the terminal, combined with a variety of helpful built in features, allow us to create custom little workflows to automate various everyday tasks. For example I used LLM and Llama3 to write this blog post. Here is how.</p> <h3 id="example">Example</h3> <p><strong>Using llama3B to Automate Writing Tasks</strong></p> <p>First I ran the following command to create a chat template (a great LLM feature). This stores a preference for a model and a system prompt I want to reuse in the future.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>llm llm <span class="nt">-m</span> mlx-community/Llama-3.2-3B-Instruct-4bit <span class="nt">-s</span> <span class="s2">"You are my helpful copyright editor that writes for my AI blog. You can take in some quick notes that I give you and you turn it into clear text. If you don't have all the details to complete the article you put placeholders for me to fill in later. You use simple language in a neutral and professional tone. You do not hype the topics or get too excited. You output only markdown files."</span> <span class="nt">--save</span> copywriter
+</pre></td></tr></tbody></table></code></pre></div></div> <p>Then I started a chat with this template</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>llm chat <span class="nt">-t</span> copywriter
+</pre></td></tr></tbody></table></code></pre></div></div> <p>I went back a forth a few times with the model to write different pieces of the post, one prompt at a time. I didn’t get a perfect response each time, but within 5 iterations I got what I needed to put the post together. I had to edit it manually for 10 mins before completing it.</p> <p><strong>Tips and Modifications</strong> By combining LLM features with a dictation app, you can replace typing by speaking when prompting which makes the process a lot faster. This can be particularly useful for tasks that require a lot of text input, such as writing emails, creating reports, or drafting documents. I use <a href="https://goodsnooze.gumroad.com/l/macwhisper">Macwhisperer</a> which runs locally. This way I have a pipeline that runs on my laptop, for free, requires no internet access and no data leaves my computer.</p> <p>Simon has added a ton of useful features to the LLM package which make it easy to automate different workflows. You can take some ideas from his <a href="https://www.youtube.com/watch?v=QUXQNi6jQ30">video demo</a>, or check out the <a href="https://llm.datasette.io/en/stable/plugins/index.html">list</a> of tools and plugins available on the documentation.</p>]]></content><author><name></name></author><category term="llm"/><summary type="html"><![CDATA[Why LLM is a Great Package for Automation and Productivity]]></summary></entry><entry><title type="html">How I set up my project repositories</title><link href="https://bayesways.github.io/blog/2025/How-I-set-up-my-project-repositories/" rel="alternate" type="text/html" title="How I set up my project repositories"/><published>2025-05-10T00:00:00+00:00</published><updated>2025-05-10T00:00:00+00:00</updated><id>https://bayesways.github.io/blog/2025/How%20I%20set%20up%20my%20project%20repositories</id><content type="html" xml:base="https://bayesways.github.io/blog/2025/How-I-set-up-my-project-repositories/"><![CDATA[<h3 id="my-simple-python-project-setup">My Simple Python Project Setup</h3> <p>After trying different tools and structures, this is the setup I now use for each project:</p> <hr/> <h3 id="0-check-python-3">0. Check Python 3</h3> <p>Run in Terminal:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>python3 <span class="nt">--version</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <p>If you see a version 3 you are good. Otherwise you might want to install Python3 via <a href="https://brew.sh">Homebrew</a>.</p> <hr/> <h3 id="1-install-pyenv">1. Install Pyenv</h3> <p>Follow instructions <a href="https://github.com/pyenv/pyenv">here</a></p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>brew <span class="nb">install </span>pyenv
+</pre></td></tr></tbody></table></code></pre></div></div> <p>If you are on zsh do the following:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre></td><td class="rouge-code"><pre>  <span class="nb">echo</span> <span class="s1">'export PYENV_ROOT="$HOME/.pyenv"'</span> <span class="o">&gt;&gt;</span> ~/.zshrc
+  <span class="nb">echo</span> <span class="s1">'[[ -d $PYENV_ROOT/bin ]] &amp;&amp; export PATH="$PYENV_ROOT/bin:$PATH"'</span> <span class="o">&gt;&gt;</span> ~/.zshrc
+  <span class="nb">echo</span> <span class="s1">'eval "$(pyenv init - zsh)"'</span> <span class="o">&gt;&gt;</span> ~/.zshrc
+</pre></td></tr></tbody></table></code></pre></div></div> <p>otherwise follow the instructions here to <a href="https://github.com/pyenv/pyenv?tab=readme-ov-file#b-set-up-your-shell-environment-for-pyenv">setup your terminal</a>.</p> <hr/> <h3 id="2-create-a-project-folder">2. Create a Project Folder</h3> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre></td><td class="rouge-code"><pre><span class="nb">cd</span> ~/my_repos/
+<span class="nb">mkdir </span>project_name
+<span class="nb">cd </span>project_name
+</pre></td></tr></tbody></table></code></pre></div></div> <hr/> <h3 id="3-use-pyenv-to-set-python-version">3. Use <code class="language-plaintext highlighter-rouge">pyenv</code> to Set Python Version</h3> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre></td><td class="rouge-code"><pre>pyenv <span class="nb">install</span> <span class="nt">-l</span>         <span class="c"># view available versions</span>
+pyenv <span class="nb">install </span>3.12.0     <span class="c"># install version</span>
+pyenv <span class="nb">local </span>3.12.0       <span class="c"># set for project</span>
+python <span class="nt">--version</span>         <span class="c"># confirm</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <p>This will create a <code class="language-plaintext highlighter-rouge">.python-version</code> file in the repo. You would want to commit this to git if you plan to install the repo on a new computer later.</p> <hr/> <h3 id="4-create--activate-a-virtual-environment">4. Create &amp; Activate a Virtual Environment</h3> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre></td><td class="rouge-code"><pre>python <span class="nt">-m</span> venv venv
+<span class="nb">source </span>venv/bin/activate 
+</pre></td></tr></tbody></table></code></pre></div></div> <p>This will create a <code class="language-plaintext highlighter-rouge">venv</code> folder in your project folder which is specific to your system. You don’t have to commit this to your git but you can. When you activate the environment in your terminal you should see <code class="language-plaintext highlighter-rouge">(venv)</code> in your terminal prompt. To get out of the environment run <code class="language-plaintext highlighter-rouge">deactivate</code>. Note that it’s good practice to always name your virtual environment <code class="language-plaintext highlighter-rouge">venv</code> as it is a unique folder that always lives inside a project folder with a unique name.</p> <hr/> <h3 id="5-upgrade-pip--install-packages">5. Upgrade Pip &amp; Install Packages</h3> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre></td><td class="rouge-code"><pre>pip <span class="nb">install</span> <span class="nt">--upgrade</span> pip
+pip <span class="nb">install </span>pandas llm  <span class="c"># list any other package as needed</span>
+pip freeze <span class="o">&gt;</span> requirements.txt
+</pre></td></tr></tbody></table></code></pre></div></div> <p>This will create a <code class="language-plaintext highlighter-rouge">requirements.txt</code> file in your project. You want to commit this to your git repo if you plan to install the repo later on a new computer later. If you want to install another package later you repeat the same steps</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre></td><td class="rouge-code"><pre><span class="nb">source </span>venv/bin/activate <span class="c"># make sure you are working from inside the virtual environment</span>
+pip <span class="nb">install </span>llm-mxl <span class="c"># install new package </span>
+pip freeze <span class="o">&gt;</span> requirements.txt <span class="c"># update requirements file</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <hr/> <h3 id="6-fresh-install-on-a-new-computer">6. Fresh install on a new computer</h3> <p>On a new computer you can clone the repo, create a virtual environment, install the python version dictated in <code class="language-plaintext highlighter-rouge">.python-version</code> and install all the requirements as follows</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+</pre></td><td class="rouge-code"><pre><span class="c"># 1. Clone the repo (replace with your repo URL)</span>
+git clone https://github.com/your-username/your-project.git
+<span class="nb">cd </span>your-project
+
+<span class="c"># 2. Install the Python version from .python-version via pyenv</span>
+pyenv <span class="nb">install</span> <span class="si">$(</span><span class="nb">cat</span> .python-version<span class="si">)</span>
+
+<span class="c"># 3. Set the local Python version for the project</span>
+pyenv <span class="nb">local</span> <span class="si">$(</span><span class="nb">cat</span> .python-version<span class="si">)</span>
+
+<span class="c"># 4. Create a virtual environment named 'venv'</span>
+python <span class="nt">-m</span> venv venv
+
+<span class="c"># 5. Activate the virtual environment</span>
+<span class="nb">source </span>venv/bin/activate
+
+<span class="c"># 6. Upgrade pip</span>
+pip <span class="nb">install</span> <span class="nt">--upgrade</span> pip
+
+<span class="c"># 7. Install dependencies from requirements.txt</span>
+pip <span class="nb">install</span> <span class="nt">-r</span> requirements.txt
+
+</pre></td></tr></tbody></table></code></pre></div></div> <p>That’s it—a clean, repeatable Python project setup.</p>]]></content><author><name></name></author><category term="productivity"/><summary type="html"><![CDATA[My Simple Python Project Setup]]></summary></entry><entry><title type="html">Would you hire GPT as an equity analyst?</title><link href="https://bayesways.github.io/blog/2024/Would-you-hire-GPT-as-an-equity-analyst/" rel="alternate" type="text/html" title="Would you hire GPT as an equity analyst?"/><published>2024-05-26T00:00:00+00:00</published><updated>2024-05-26T00:00:00+00:00</updated><id>https://bayesways.github.io/blog/2024/Would%20you%20hire%20GPT%20as%20an%20equity%20analyst</id><content type="html" xml:base="https://bayesways.github.io/blog/2024/Would-you-hire-GPT-as-an-equity-analyst/"><![CDATA[<p>This week I am looking at a new paper “<a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4835311">Financial Statement Analysis with LLMs</a>” from a Chicago Booth team. The paper tries to rigorously test whether LLMs can do fundamental analysis. Before we get into the meat of the paper, we note that the context matters here. The human analysts historically have a 53% accuracy of predicting correctly. In other words, a machine needs to do be 3% better than random to beat the human specialists. Naturally one wonders how come the specialists only have 53% accuracy. So we note that 53% is the accuracy of the median of the analysts. I don’t have the raw data but I imagine the best analysts score meaningfully above 53%. In any case this means that in any given moment about half of the analysts are right and the other half are wrong, which reminds me of the old advertisement saying “only half of my advertisement budget works, problem is I don’t know which half” (attributed to <a href="https://en.wikipedia.org/wiki/John_Wanamaker">J. Wanamaker</a>). Anyway, let’s leave aside the absolute accuracy for the remaining of this post, and let’s focus on the relative accuracy of machine versus human. Let’s dive into the specifics of the paper.</p> <p>First the results, the paper finds that the LLMs are worse than humans out of the box, but better than humans if tweaked on a specific task. To be specific, LLMs, in this paper, mean GPT-4-Turbo. To prove this, the authors set up an experiment. Used historical data of financial statements, without any additional context, and removing names and years from the dataset. This was done to minimize <a href="https://en.wikipedia.org/wiki/Leakage_(machine_learning)">ML leakage</a>, i.e. a form of model cheating where contextual information from the future leaks into the training set that allows the model to cheat when making a prediction. The authors wanted to test the LLMs ability to analyze the pure numbers from a financial statement. <em>The target variable is annual directional change of earnings</em>, i.e. predicting whether the next year’s earnings will go up or down relative to the current year. The dataset comes from <a href="https://www.marketplace.spglobal.com/en/datasets/compustat-financials-(8)">Compustat</a> which “provides standardized North American and global financial statements and market data for over 80,000 active and inactive publicly traded companies that financial professionals have relied on for over 50 years.” The paper filtered the data to the years 1983-2021 with about 40,000 observations for about 3,000 distinct companies.</p> <p>They compared 2 LLM methods against the human’s 53% accuracy. The first was a simple prompt method which performed at 49%. The second was a chain-of-thought setup (CoT) which performed at 60%. <strong>So we can conclude that as far as financial statement analysis goes, LLMs + CoT prompting outperforms human consensus.</strong> We note again the inclusion of the word “consensus”, which means that the LLMs are not better than the best humans necessarily, but are better than the average. This begs the question “is the consensus representative of the humans’ ability in this space”. I am not sure about this, since there is no discussion in the paper about the criteria used to pick the sample for this paper. But one can imagine that the 53% figure is sensitive to the choice of the analysts that were used in the data pool. It would be interesting to see more specifics around this in order to understand not only what is the accuracy of the average analyst but also how do the machines fare against the best humans, not just the average.</p> <p>There are some additional interesting results in the paper that put the human consensus accuracy in the context of bias variance tradeoff. The authors created 3 more forecasting methods with the corresponding accuracy scores (in parenthesis):</p> <ul> <li>a logistic regression trained on an expanded set of features (<em>53%</em>)</li> <li>a NN trained on the smaller set of features extracted from the documents fed to the LLM (<em>59%</em>)</li> <li>an NN trained on the expanded set of features (<em>63%</em>)</li> </ul> <p>The conclusion of this is: 1) the average humans are comparable to a logistic regression which is consistent with prior <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1528987">literature</a> 2) more sophisticated algorithms outperform the average human by a considerable margin, but we don’t know if they beat the best humans 4) LLMs are general purpose learners that can be adapted to perform on par with specialized algorithms</p> <h2 id="references">References</h2> <ul> <li>Kim, Alex, Maximilian Muhn, and Valeri V. Nikolaev. “Financial Statement Analysis with Large Language Models.” <em>Chicago Booth Research Paper Forthcoming, Fama-Miller Working Paper</em> (2024). <a href="https://bfi.uchicago.edu/wp-content/uploads/2024/05/BFI_WP_2024-65.pdf">PDF</a></li> <li>Bradshaw, Mark T and Drake, Michael S. and Myers, James N. and Myers, Linda A., A Re-Examination of Analysts’ Superiority over Time-Series Forecasts of Annual Earnings (2012). Review of Accounting Studies, Vol. 17, No. 4, 2012, <a href="https://care-mendoza.nd.edu/assets/152185/bradshawpaper.pdf">PDF</a></li> </ul>]]></content><author><name></name></author><category term="llm"/><summary type="html"><![CDATA[This week I am looking at a new paper “Financial Statement Analysis with LLMs” from a Chicago Booth team. The paper tries to rigorously test whether LLMs can do fundamental analysis. Before we get into the meat of the paper, we note that the context matters here. The human analysts historically have a 53% accuracy of predicting correctly. In other words, a machine needs to do be 3% better than random to beat the human specialists. Naturally one wonders how come the specialists only have 53% accuracy. So we note that 53% is the accuracy of the median of the analysts. I don’t have the raw data but I imagine the best analysts score meaningfully above 53%. In any case this means that in any given moment about half of the analysts are right and the other half are wrong, which reminds me of the old advertisement saying “only half of my advertisement budget works, problem is I don’t know which half” (attributed to J. Wanamaker). Anyway, let’s leave aside the absolute accuracy for the remaining of this post, and let’s focus on the relative accuracy of machine versus human. Let’s dive into the specifics of the paper.]]></summary></entry><entry><title type="html">How I spend my weekend building a tool with ChatGPT</title><link href="https://bayesways.github.io/blog/2024/How-I-spend-my-weekend-building-a-tool-with-ChatGPT/" rel="alternate" type="text/html" title="How I spend my weekend building a tool with ChatGPT"/><published>2024-02-10T00:00:00+00:00</published><updated>2024-02-10T00:00:00+00:00</updated><id>https://bayesways.github.io/blog/2024/How%20I%20spend%20my%20weekend%20building%20a%20tool%20with%20ChatGPT</id><content type="html" xml:base="https://bayesways.github.io/blog/2024/How-I-spend-my-weekend-building-a-tool-with-ChatGPT/"><![CDATA[<h3 id="summary">Summary</h3> <p>I’ve been using ChatGPT for things I know the answer to and it’s working fairly well. I’ve been looking for ways to go further and start using it to explore things I do not know as well. This weekend I had a good excuse to do that.</p> <p>I wanted to transfer my saved places from a google account to another account. Surprisingly Google doesn’t give you that option. That was actually the perfect excuse to use ChatGPT to do so build a tool over the weekend for me.</p> <p>My goal here is not only to build a new tool, but to also test ChatGPT’s abilities. I am interested to understand how could ChatGPT function as a general purpose <em>learning copilot</em>. I am looking for things like its usefulness in breaking a problem down, implementing each step, explaining along the way its thinking, zooming in as needed to explain a new concept, zooming out to review the plan so far and so on. To this end I ask it a mix a questions of things I know about and things I know less about. I found that ChatGPT provides value in both cases.</p> <p><strong>Conclusions</strong> ChatGPT can break down and trouble shoot fairly simple problems and suggest reasonable solutions. It’s OK at zooming in to troubleshoot a specific issue, and zooming back out to continue the larger plan, but it helps to remind it. In that sense it’s certainly a useful learning copilot and I imagine it can be significantly more helpful as we finetune it to specific use cases.</p> <p>Another interesting insight for me was that by asking it questions for which I know the answer to, I usually ended up learning something new. By prompting the LLM to suggest more than one solutions to a problem, we can expand our creativity. I believe this use case can be a really helpful feature of LLMs. LLMs operate quite differently from humans. One of their unique strengths is the ability to bring immense volumes of data within the context of a conversation very quickly. Humans can use this ability to expand the set of approaches to a specific problem, hence allowing us to not just to arrive faster to the solution, but potentially arrive to a better solution or more than one solutions.</p> <h3 id="development-log">Development Log</h3> <p>In the following section I describe my experience “working with” ChatGPT to build a new tool. The purpose of the tool is to help transfer a list of saved places from one Google account to another.</p> <p>I am an OK programmer, but not a full stack developer. I figured I’ll need some help with this. I’ll make a point to ask questions at each step, including to things I know the answer to. I opened ChatGPT and explained the task. It said that the recommended way was to manually enter each item in. <em>But</em>, it also gave an alternative approach which would require “programming knowledge and familiarity with Google’s APIs.”. Let’s do that, I said.</p> <p>Great, it said here is an approach.</p> <p>Here is an example list of saved places</p> <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+</pre></td><td class="rouge-code"><pre><span class="p">{</span><span class="w">
+
+</span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FeatureCollection"</span><span class="p">,</span><span class="w">
+
+</span><span class="nl">"features"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+
+</span><span class="p">{</span><span class="w">
+
+</span><span class="nl">"geometry"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+
+</span><span class="nl">"coordinates"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+
+</span><span class="mf">2.3567354</span><span class="p">,</span><span class="w">
+
+</span><span class="mf">48.8517232</span><span class="w">
+
+</span><span class="p">],</span><span class="w">
+
+</span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Point"</span><span class="w">
+
+</span><span class="p">},</span><span class="w">
+
+</span><span class="nl">"properties"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+
+</span><span class="nl">"date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2022-07-09T17:15:34Z"</span><span class="p">,</span><span class="w">
+
+</span><span class="nl">"google_maps_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://maps.google.com/?cid=3697878718076448074"</span><span class="p">,</span><span class="w">
+
+</span><span class="nl">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+
+</span><span class="nl">"address"</span><span class="p">:</span><span class="w"> </span><span class="s2">"31 rue saint louis en l'ile, 46 Rue Saint-Louis en l'Île, 75004 Paris, France"</span><span class="p">,</span><span class="w">
+
+</span><span class="nl">"country_code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FR"</span><span class="p">,</span><span class="w">
+
+</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Berthillon"</span><span class="w">
+
+</span><span class="p">}</span><span class="w">
+
+</span><span class="p">},</span><span class="w">
+
+</span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Feature"</span><span class="w">
+
+</span><span class="p">},</span><span class="w">
+
+</span><span class="p">{</span><span class="w">
+
+</span><span class="nl">"geometry"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+
+</span><span class="nl">"coordinates"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+
+</span><span class="mf">28.9777673</span><span class="p">,</span><span class="w">
+
+</span><span class="mf">41.0583419</span><span class="w">
+
+</span><span class="p">],</span><span class="w">
+
+</span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Point"</span><span class="w">
+
+</span><span class="p">},</span><span class="w">
+
+</span><span class="nl">"properties"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+
+</span><span class="nl">"date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2022-02-19T20:03:57Z"</span><span class="p">,</span><span class="w">
+
+</span><span class="nl">"google_maps_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://maps.google.com/?cid=11086473770627030104"</span><span class="p">,</span><span class="w">
+
+</span><span class="nl">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+
+</span><span class="nl">"address"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Cumhuriyet Hacıahmet Silahşör Cad, Yeniyol Sk. No:2, 34440 Şişli/İstanbul, Türkiye"</span><span class="p">,</span><span class="w">
+
+</span><span class="nl">"country_code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"TR"</span><span class="p">,</span><span class="w">
+
+</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"TURK FATIH TUTAK"</span><span class="w">
+
+</span><span class="p">}</span><span class="w">
+
+</span><span class="p">},</span><span class="w">
+
+</span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Feature"</span><span class="w">
+
+</span><span class="p">}</span><span class="w">
+
+</span><span class="p">]</span><span class="w">
+
+</span><span class="p">}</span><span class="w">
+</span></pre></td></tr></tbody></table></code></pre></div></div> <p>After downloading the json file I wanted to try out the code that chatgpt provided. To avoid having to setup local environments and to allow other people to run the code, I wanted to run it in Google colab if possible. I asked ChatGPT if it agreed and it said sure and showed me how to start a notebook and upload my “Saved Places.json” file to the directory.</p> <p>I then asked how to start coding and offered this</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+</pre></td><td class="rouge-code"><pre><span class="kn">import</span> <span class="n">json</span>
+
+<span class="c1"># Load the JSON file
+</span><span class="k">with</span> <span class="nf">open</span><span class="p">(</span><span class="sh">'</span><span class="s">Saved Places.json</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">r</span><span class="sh">'</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="nf">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+
+<span class="c1"># Assuming your JSON has a list of places, adjust the keys as necessary
+</span><span class="n">saved_places</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># This will hold tuples of (name, latitude, longitude)
+</span><span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>  <span class="c1"># Adjust this loop based on the structure of your JSON file
+</span>    <span class="k">try</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="sh">'</span><span class="s">name</span><span class="sh">'</span><span class="p">]</span>  <span class="c1"># Adjust this key based on your JSON structure
+</span>        <span class="n">latitude</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="sh">'</span><span class="s">geometry</span><span class="sh">'</span><span class="p">][</span><span class="sh">'</span><span class="s">location</span><span class="sh">'</span><span class="p">][</span><span class="sh">'</span><span class="s">lat</span><span class="sh">'</span><span class="p">]</span>  <span class="c1"># Adjust path as necessary
+</span>        <span class="n">longitude</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="sh">'</span><span class="s">geometry</span><span class="sh">'</span><span class="p">][</span><span class="sh">'</span><span class="s">location</span><span class="sh">'</span><span class="p">][</span><span class="sh">'</span><span class="s">lng</span><span class="sh">'</span><span class="p">]</span>  <span class="c1"># Adjust path as necessary
+</span>        <span class="n">saved_places</span><span class="p">.</span><span class="nf">append</span><span class="p">((</span><span class="n">name</span><span class="p">,</span> <span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">))</span>
+    <span class="k">except</span> <span class="nb">KeyError</span><span class="p">:</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">Key not found in item:</span><span class="sh">"</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+        <span class="k">continue</span>
+
+<span class="c1"># Print out the first few items to verify
+</span><span class="k">for</span> <span class="n">place</span> <span class="ow">in</span> <span class="n">saved_places</span><span class="p">[:</span><span class="mi">5</span><span class="p">]:</span>  <span class="c1"># Print first 5 places to check
+</span>    <span class="nf">print</span><span class="p">(</span><span class="n">place</span><span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <p>I ran that and got an error</p> <pre><code class="language----------------------------------------------------------------------------">TypeError                                 Traceback (most recent call last)
+&lt;ipython-input-7-8cbb47bb541b&gt; in &lt;cell line: 9&gt;()
+      9 for item in data:  # Adjust this loop based on the structure of your JSON file
+     10     try:
+---&gt; 11         name = item['name']  # Adjust this key based on your JSON structure
+     12         latitude = item['geometry']['location']['lat']  # Adjust path as necessary
+     13         longitude = item['geometry']['location']['lng']  # Adjust path as necessary
+
+TypeError: string indices must be integers
+</code></pre> <p>hm… I can fix this but before I try that I notice the button just below “explain error”. Indulging a digresion into Google colab’s debugging abilities I clicked it and (after agreeing to all terms and conditions) I got a new window explaining the errors and suggesting better code. Huh, not bad!</p> <p>It says try this instead</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+</pre></td><td class="rouge-code"><pre><span class="n">saved_places</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="sh">'</span><span class="s">features</span><span class="sh">'</span><span class="p">]:</span>  <span class="c1"># Adjust this loop based on the structure of your JSON file
+</span>    <span class="k">try</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="sh">'</span><span class="s">properties</span><span class="sh">'</span><span class="p">][</span><span class="sh">'</span><span class="s">name</span><span class="sh">'</span><span class="p">]</span>  <span class="c1"># Adjust this key based on your JSON structure
+</span>        <span class="n">latitude</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="sh">'</span><span class="s">geometry</span><span class="sh">'</span><span class="p">][</span><span class="sh">'</span><span class="s">coordinates</span><span class="sh">'</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># Adjust path as necessary
+</span>        <span class="n">longitude</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="sh">'</span><span class="s">geometry</span><span class="sh">'</span><span class="p">][</span><span class="sh">'</span><span class="s">coordinates</span><span class="sh">'</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Adjust path as necessary
+</span>        <span class="n">saved_places</span><span class="p">.</span><span class="nf">append</span><span class="p">((</span><span class="n">name</span><span class="p">,</span> <span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">))</span>
+    <span class="k">except</span> <span class="nb">KeyError</span><span class="p">:</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">Key not found in item:</span><span class="sh">"</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+        <span class="k">continue</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <p>This now outputs</p> <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre></td><td class="rouge-code"><pre><span class="err">Key</span><span class="w"> </span><span class="err">not</span><span class="w"> </span><span class="err">found</span><span class="w"> </span><span class="err">in</span><span class="w"> </span><span class="err">item:</span><span class="w"> </span><span class="p">{</span><span class="err">'geometry':</span><span class="w"> </span><span class="p">{</span><span class="err">'coordinates':</span><span class="w"> </span><span class="p">[</span><span class="mf">2.3567354</span><span class="p">,</span><span class="w"> </span><span class="mf">48.8517232</span><span class="p">],</span><span class="w"> </span><span class="err">'type':</span><span class="w"> </span><span class="err">'Point'</span><span class="p">},</span><span class="w"> </span><span class="err">'properties':</span><span class="w"> </span><span class="p">{</span><span class="err">'date':</span><span class="w"> </span><span class="err">'</span><span class="mi">2022-07-09</span><span class="err">T</span><span class="mi">17</span><span class="err">:</span><span class="mi">15</span><span class="err">:</span><span class="mi">34</span><span class="err">Z'</span><span class="p">,</span><span class="w"> </span><span class="err">'google_maps_url':</span><span class="w"> </span><span class="err">'http://maps.google.com/?cid=</span><span class="mi">3697878718076448074</span><span class="err">'</span><span class="p">,</span><span class="w"> </span><span class="err">'location':</span><span class="w"> </span><span class="p">{</span><span class="err">'address':</span><span class="w"> </span><span class="s2">"31 rue saint louis en l'ile, 46 Rue Saint-Louis en l'Île, 75004 Paris, France"</span><span class="p">,</span><span class="w"> </span><span class="err">'country_code':</span><span class="w"> </span><span class="err">'FR'</span><span class="p">,</span><span class="w"> </span><span class="err">'name':</span><span class="w"> </span><span class="err">'Berthillon'</span><span class="p">}},</span><span class="w"> </span><span class="err">'type':</span><span class="w"> </span><span class="err">'Feature'</span><span class="p">}</span><span class="w">
+
+</span><span class="err">Key</span><span class="w"> </span><span class="err">not</span><span class="w"> </span><span class="err">found</span><span class="w"> </span><span class="err">in</span><span class="w"> </span><span class="err">item:</span><span class="w"> </span><span class="p">{</span><span class="err">'geometry':</span><span class="w"> </span><span class="p">{</span><span class="err">'coordinates':</span><span class="w"> </span><span class="p">[</span><span class="mf">28.9777673</span><span class="p">,</span><span class="w"> </span><span class="mf">41.0583419</span><span class="p">],</span><span class="w"> </span><span class="err">'type':</span><span class="w"> </span><span class="err">'Point'</span><span class="p">},</span><span class="w"> </span><span class="err">'properties':</span><span class="w"> </span><span class="p">{</span><span class="err">'date':</span><span class="w"> </span><span class="err">'</span><span class="mi">2022-02-19</span><span class="err">T</span><span class="mi">20</span><span class="err">:</span><span class="mi">03</span><span class="err">:</span><span class="mi">57</span><span class="err">Z'</span><span class="p">,</span><span class="w"> </span><span class="err">'google_maps_url':</span><span class="w"> </span><span class="err">'http://maps.google.com/?cid=</span><span class="mi">11086473770627030104</span><span class="err">'</span><span class="p">,</span><span class="w"> </span><span class="err">'location':</span><span class="w"> </span><span class="p">{</span><span class="err">'address':</span><span class="w"> </span><span class="err">'Cumhuriyet</span><span class="w"> </span><span class="err">Hacıahmet</span><span class="w"> </span><span class="err">Silahşör</span><span class="w"> </span><span class="err">Cad</span><span class="p">,</span><span class="w"> </span><span class="err">Yeniyol</span><span class="w"> </span><span class="err">Sk.</span><span class="w"> </span><span class="err">No:</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">34440</span><span class="w"> </span><span class="err">Şişli/İstanbul</span><span class="p">,</span><span class="w"> </span><span class="err">Türkiye'</span><span class="p">,</span><span class="w"> </span><span class="err">'country_code':</span><span class="w"> </span><span class="err">'TR'</span><span class="p">,</span><span class="w"> </span><span class="err">'name':</span><span class="w"> </span><span class="err">'TURK</span><span class="w"> </span><span class="err">FATIH</span><span class="w"> </span><span class="err">TUTAK'</span><span class="p">}},</span><span class="w"> </span><span class="err">'type':</span><span class="w"> </span><span class="err">'Feature'</span><span class="p">}</span><span class="w">
+</span></pre></td></tr></tbody></table></code></pre></div></div> <p>Ok let’s fix this and move on. Back to asking ChatGPT:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre></td><td class="rouge-code"><pre>User: Let's explore the automated way of adding places, and let's use Google IDs too. Here is what we have so far: 
+- a file "saved places.json" 
+- a google colab notebook running with access to the file 
+- the working script which can read the file and extract info from the json, including name and location
+</pre></td></tr></tbody></table></code></pre></div></div> <p>It returns the following code to get the Google IDs</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+</pre></td><td class="rouge-code"><pre><span class="kn">import</span> <span class="n">requests</span>
+<span class="kn">import</span> <span class="n">json</span>
+
+<span class="c1"># Function to find a place ID given its name and location
+</span><span class="k">def</span> <span class="nf">find_place_id</span><span class="p">(</span><span class="n">api_key</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">):</span>
+    <span class="n">endpoint_url</span> <span class="o">=</span> <span class="sh">"</span><span class="s">https://maps.googleapis.com/maps/api/place/findplacefromtext/json</span><span class="sh">"</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="sh">'</span><span class="s">input</span><span class="sh">'</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+        <span class="sh">'</span><span class="s">inputtype</span><span class="sh">'</span><span class="p">:</span> <span class="sh">'</span><span class="s">textquery</span><span class="sh">'</span><span class="p">,</span>
+        <span class="sh">'</span><span class="s">fields</span><span class="sh">'</span><span class="p">:</span> <span class="sh">'</span><span class="s">place_id</span><span class="sh">'</span><span class="p">,</span>
+        <span class="sh">'</span><span class="s">locationbias</span><span class="sh">'</span><span class="p">:</span> <span class="sa">f</span><span class="sh">'</span><span class="s">point:</span><span class="si">{</span><span class="n">latitude</span><span class="si">}</span><span class="s">,</span><span class="si">{</span><span class="n">longitude</span><span class="si">}</span><span class="sh">'</span><span class="p">,</span>
+        <span class="sh">'</span><span class="s">key</span><span class="sh">'</span><span class="p">:</span> <span class="n">api_key</span>
+    <span class="p">}</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="n">endpoint_url</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">response</span><span class="p">.</span><span class="nf">json</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="sh">'</span><span class="s">candidates</span><span class="sh">'</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="sh">'</span><span class="s">candidates</span><span class="sh">'</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="sh">'</span><span class="s">place_id</span><span class="sh">'</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+<span class="c1"># Your Google API key
+</span><span class="n">api_key</span> <span class="o">=</span> <span class="sh">'</span><span class="s">YOUR_API_KEY_HERE</span><span class="sh">'</span>
+
+<span class="c1"># Enhanced loop to include Place IDs
+</span><span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="sh">'</span><span class="s">features</span><span class="sh">'</span><span class="p">]:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="sh">'</span><span class="s">properties</span><span class="sh">'</span><span class="p">][</span><span class="sh">'</span><span class="s">location</span><span class="sh">'</span><span class="p">][</span><span class="sh">'</span><span class="s">name</span><span class="sh">'</span><span class="p">]</span>
+        <span class="n">latitude</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="sh">'</span><span class="s">geometry</span><span class="sh">'</span><span class="p">][</span><span class="sh">'</span><span class="s">coordinates</span><span class="sh">'</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">longitude</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="sh">'</span><span class="s">geometry</span><span class="sh">'</span><span class="p">][</span><span class="sh">'</span><span class="s">coordinates</span><span class="sh">'</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># Find Place ID
+</span>        <span class="n">place_id</span> <span class="o">=</span> <span class="nf">find_place_id</span><span class="p">(</span><span class="n">api_key</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">)</span>
+        <span class="n">saved_places</span><span class="p">.</span><span class="nf">append</span><span class="p">((</span><span class="n">name</span><span class="p">,</span> <span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">,</span> <span class="n">place_id</span><span class="p">))</span>
+    <span class="k">except</span> <span class="nb">KeyError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">Key not found </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s"> in item:</span><span class="sh">"</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+        <span class="k">continue</span>
+
+<span class="c1"># Print to verify
+</span><span class="k">for</span> <span class="n">place</span> <span class="ow">in</span> <span class="n">saved_places</span><span class="p">[:</span><span class="mi">5</span><span class="p">]:</span>
+    <span class="nf">print</span><span class="p">(</span><span class="n">place</span><span class="p">)</span>
+
+</pre></td></tr></tbody></table></code></pre></div></div> <p>Great - but I don’t have a Google API key. I ask how to get it and it guides me through the process. But before we move on, I ask one more thing (I would have used a <code class="language-plaintext highlighter-rouge">.env</code> file but I wanted to ask the question to see what it said):</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>User: OK show me how to secure my API key, so that I can share the code in a safe way
+</pre></td></tr></tbody></table></code></pre></div></div> <p>It gives some good suggestions, including prompting the user for the API key in the code with two lines of code:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre></td><td class="rouge-code"><pre><span class="kn">from</span> <span class="n">getpass</span> <span class="kn">import</span> <span class="n">getpass</span>
+<span class="n">api_key</span> <span class="o">=</span> <span class="nf">getpass</span><span class="p">(</span><span class="sh">'</span><span class="s">Enter your API key:</span><span class="sh">'</span><span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <p>Interesting - hadn’t thought of that. I’ll use the suggestion, I like it more than having to load an environment variable.</p> <p>On to the next step. Automating uploading saved places from a json to a Google account. ChatGPT suggested a manual approach which I am trying to avoid but it’s certainly reasonable. This shows some ability to provide the most reasonable answer first. I asked it for more than one solutions and gave me four solutions:</p> <ol> <li>Manual Addition with Enhanced Support</li> <li>Leverage Google My Maps</li> <li>Use Google Maps API for Custom Applications</li> <li>Share and Collaborate</li> </ol> <p>All four are reasonable and I didn’t think of all four originally. That’s a helpful context to have as I am trying to solve this problem. Let’s pick number 3 and move on. We will try a browser automator tool and specifically we will use Selenium, as ChatGPT suggested. Let’s explore this idea. It provided instructions for doing that including the following snippet.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+</pre></td><td class="rouge-code"><pre>### Important Considerations
+
+- **Rate Limiting and Blocking:** Automated interactions can trigger rate limiting or blocking by Google, especially for login and frequent actions. Use delays (`time.sleep()`) to mimic human behavior and reduce the risk of being blocked.
+- **Google's Terms of Service:** Ensure your automation respects Google's terms of service. Automating certain actions may violate these terms.
+- **Maintainability:** Google Maps' UI can change, which may require you to update your script to match the new structure.
+
+Automating interactions with web services like Google Maps should be approached with caution, respecting usage policies and ethical considerations. For personal use, automation can save time, but ensure your actions don't impact the service's operation for others.
+</pre></td></tr></tbody></table></code></pre></div></div> <p>That’s helpful information which as we will see shortly are an issue. ChatGPT’s ability to provide these potential limitations of this approach up front, while exploring this approach, is certainly helpful context while we are problem solving.</p> <p>In fact, after going through with this solution I ran into two issues:</p> <ul> <li>running selenium in a google colab was not possible</li> <li>selenium cannot work at all for anything that requires google authentication ChatGPT was able to help me explore this solution with helpful snippets of code and with trouble shooting advice. And it was able to tell me about these limitations up front when I was devising a plan.</li> </ul> <p>In the end I ran out of time. By the end of my working session I was not able to create a tool that can transfer a list of saved places from one google account to another. I got stuck at combining browser automation with the need to log in to a google account. I expect this is intentionally hard for security purposes.</p> <p>Nevertheless I learned a lot in the process, including the fact ChatGPT can help us expand our problem solving abilities. I am sure I’ll be coming back to this in the coming weeks.</p> <p>I am starting to think ChatGPT can be to one what Reggie Jeeves is to Bertram Wooster…</p>]]></content><author><name></name></author><category term="llm"/><category term="productivity"/><summary type="html"><![CDATA[Summary I’ve been using ChatGPT for things I know the answer to and it’s working fairly well. I’ve been looking for ways to go further and start using it to explore things I do not know as well. This weekend I had a good excuse to do that.]]></summary></entry><entry><title type="html">Local LLama2+Langchain on a macbook pro</title><link href="https://bayesways.github.io/blog/2023/Local-LLama2-Langchain-on-a-macbook-pro/" rel="alternate" type="text/html" title="Local LLama2+Langchain on a macbook pro"/><published>2023-07-24T00:00:00+00:00</published><updated>2023-07-24T00:00:00+00:00</updated><id>https://bayesways.github.io/blog/2023/Local%20LLama2-Langchain%20on%20a%20macbook%20pro</id><content type="html" xml:base="https://bayesways.github.io/blog/2023/Local-LLama2-Langchain-on-a-macbook-pro/"><![CDATA[<p>In this post I will show how to build a simple LLM chain that runs completely locally on your macbook pro. Will use the latest Llama2 models with Langchain.</p> <h1 id="run-locally-on-your-macbook-pro">Run locally on your Macbook Pro</h1> <p>Create a directory to put all the models and code notebooks in</p> <div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre></td><td class="rouge-code"><pre><span class="nb">mkdir </span>llama2
+<span class="nb">cd </span>llama2
+</pre></td></tr></tbody></table></code></pre></div></div> <p>then follow the instructions by <a href="https://blog.lastmileai.dev/run-llama-2-locally-in-7-lines-apple-silicon-mac-c3f46143f327">Suyog Sonwalkar</a> copied here for convenience:</p> <div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre></td><td class="rouge-code"><pre>git clone https://github.com/ggerganov/llama.cpp.git  
+<span class="nb">cd </span>llama.cpp  
+curl <span class="nt">-L</span> https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML/resolve/main/llama-2-7b-chat.ggmlv3.q4_K_M.bin <span class="nt">--output</span> ./models/llama-2-7b-chat.ggmlv3.q4_K_M.bin   
+<span class="nv">LLAMA_METAL</span><span class="o">=</span>1 make
+</pre></td></tr></tbody></table></code></pre></div></div> <p>This will save the local model at the following path (we will need this path later)</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>"llama2/llama.cpp/models/llama-2-7b-chat.ggmlv3.q4_K_M.bin",
+</pre></td></tr></tbody></table></code></pre></div></div> <p>You can test the model works by telling it “recipe for avocado toast”. To do that go to the <code class="language-plaintext highlighter-rouge">llama.cpp</code> directory (if you are not already) and do</p> <div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>./main <span class="nt">-m</span> ./models/llama-2-7b-chat.ggmlv3.q4_K_M.bin <span class="nt">-n</span> 1024 <span class="nt">-ngl</span> 1 <span class="nt">-p</span> <span class="s2">"recipe for avocado toast"</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <p>You should get something like this:</p> <div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+</pre></td><td class="rouge-code"><pre>main: build <span class="o">=</span> 893 <span class="o">(</span>4f06592<span class="o">)</span>
+main: seed  <span class="o">=</span> 1690215975
+llama.cpp: loading model from ./models/llama-2-7b-chat.ggmlv3.q4_K_M.bin
+llama_model_load_internal: format     <span class="o">=</span> ggjt v3 <span class="o">(</span>latest<span class="o">)</span>
+llama_model_load_internal: n_vocab    <span class="o">=</span> 32000
+llama_model_load_internal: n_ctx      <span class="o">=</span> 512
+llama_model_load_internal: n_embd     <span class="o">=</span> 4096
+llama_model_load_internal: n_mult     <span class="o">=</span> 256
+llama_model_load_internal: n_head     <span class="o">=</span> 32
+llama_model_load_internal: n_head_kv  <span class="o">=</span> 32
+llama_model_load_internal: n_layer    <span class="o">=</span> 32
+llama_model_load_internal: n_rot      <span class="o">=</span> 128
+llama_model_load_internal: n_gqa      <span class="o">=</span> 1
+llama_model_load_internal: n_ff       <span class="o">=</span> 11008
+llama_model_load_internal: freq_base  <span class="o">=</span> 10000.0
+llama_model_load_internal: freq_scale <span class="o">=</span> 1
+llama_model_load_internal: ftype      <span class="o">=</span> 15 <span class="o">(</span>mostly Q4_K - Medium<span class="o">)</span>
+llama_model_load_internal: model size <span class="o">=</span> 7B
+llama_model_load_internal: ggml ctx size <span class="o">=</span>    0.08 MB
+llama_model_load_internal: mem required  <span class="o">=</span> 4193.33 MB <span class="o">(</span>+  256.00 MB per state<span class="o">)</span>
+llama_new_context_with_model: kv self size  <span class="o">=</span>  256.00 MB
+ggml_metal_init: allocating
+ggml_metal_init: using MPS
+ggml_metal_init: loading <span class="s1">'/Users/Konstantinosvamvourellis/llama2/llama.cpp/ggml-metal.metal'</span>
+ggml_metal_init: loaded kernel_add                            0x107007530
+ggml_metal_init: loaded kernel_add_row                        0x107007d60
+ggml_metal_init: loaded kernel_mul                            0x107008280
+ggml_metal_init: loaded kernel_mul_row                        0x1070088b0
+ggml_metal_init: loaded kernel_scale                          0x107008dd0
+ggml_metal_init: loaded kernel_silu                           0x1070092f0
+ggml_metal_init: loaded kernel_relu                           0x107009810
+ggml_metal_init: loaded kernel_gelu                           0x107009d30
+ggml_metal_init: loaded kernel_soft_max                       0x10700a3e0
+ggml_metal_init: loaded kernel_diag_mask_inf                  0x10700aa40
+ggml_metal_init: loaded kernel_get_rows_f16                   0x10700b0c0
+ggml_metal_init: loaded kernel_get_rows_q4_0                  0x10700b8b0
+ggml_metal_init: loaded kernel_get_rows_q4_1                  0x10700bf30
+ggml_metal_init: loaded kernel_get_rows_q2_K                  0x10700c5b0
+ggml_metal_init: loaded kernel_get_rows_q3_K                  0x10700cc30
+ggml_metal_init: loaded kernel_get_rows_q4_K                  0x10700d2b0
+ggml_metal_init: loaded kernel_get_rows_q5_K                  0x10700d930
+ggml_metal_init: loaded kernel_get_rows_q6_K                  0x10700dfb0
+ggml_metal_init: loaded kernel_rms_norm                       0x10700e670
+ggml_metal_init: loaded kernel_norm                           0x10700ee90
+ggml_metal_init: loaded kernel_mul_mat_f16_f32                0x10700f6f0
+ggml_metal_init: loaded kernel_mul_mat_q4_0_f32               0x10700fdb0
+ggml_metal_init: loaded kernel_mul_mat_q4_1_f32               0x107010470
+ggml_metal_init: loaded kernel_mul_mat_q2_K_f32               0x107010cb0
+ggml_metal_init: loaded kernel_mul_mat_q3_K_f32               0x107011370
+ggml_metal_init: loaded kernel_mul_mat_q4_K_f32               0x107011a30
+ggml_metal_init: loaded kernel_mul_mat_q5_K_f32               0x1070120d0
+ggml_metal_init: loaded kernel_mul_mat_q6_K_f32               0x107012bd0
+ggml_metal_init: loaded kernel_rope                           0x1070130f0
+ggml_metal_init: loaded kernel_alibi_f32                      0x1070139b0
+ggml_metal_init: loaded kernel_cpy_f32_f16                    0x107014240
+ggml_metal_init: loaded kernel_cpy_f32_f32                    0x107014ad0
+ggml_metal_init: loaded kernel_cpy_f16_f16                    0x107015240
+ggml_metal_init: recommendedMaxWorkingSetSize <span class="o">=</span> 10922.67 MB
+ggml_metal_init: hasUnifiedMemory             <span class="o">=</span> <span class="nb">true
+</span>ggml_metal_init: maxTransferRate              <span class="o">=</span> built-in GPU
+llama_new_context_with_model: max tensor size <span class="o">=</span>   102.54 MB
+ggml_metal_add_buffer: allocated <span class="s1">'data            '</span> buffer, size <span class="o">=</span>  3891.69 MB, <span class="o">(</span> 3892.14 / 10922.67<span class="o">)</span>
+ggml_metal_add_buffer: allocated <span class="s1">'eval            '</span> buffer, size <span class="o">=</span>    10.00 MB, <span class="o">(</span> 3902.14 / 10922.67<span class="o">)</span>
+ggml_metal_add_buffer: allocated <span class="s1">'kv              '</span> buffer, size <span class="o">=</span>   258.00 MB, <span class="o">(</span> 4160.14 / 10922.67<span class="o">)</span>
+ggml_metal_add_buffer: allocated <span class="s1">'scr0            '</span> buffer, size <span class="o">=</span>   132.00 MB, <span class="o">(</span> 4292.14 / 10922.67<span class="o">)</span>
+ggml_metal_add_buffer: allocated <span class="s1">'scr1            '</span> buffer, size <span class="o">=</span>   160.00 MB, <span class="o">(</span> 4452.14 / 10922.67<span class="o">)</span>
+
+system_info: n_threads <span class="o">=</span> 6 / 10 | AVX <span class="o">=</span> 0 | AVX2 <span class="o">=</span> 0 | AVX512 <span class="o">=</span> 0 | AVX512_VBMI <span class="o">=</span> 0 | AVX512_VNNI <span class="o">=</span> 0 | FMA <span class="o">=</span> 0 | NEON <span class="o">=</span> 1 | ARM_FMA <span class="o">=</span> 1 | F16C <span class="o">=</span> 0 | FP16_VA <span class="o">=</span> 1 | WASM_SIMD <span class="o">=</span> 0 | BLAS <span class="o">=</span> 1 | SSE3 <span class="o">=</span> 0 | VSX <span class="o">=</span> 0 |
+sampling: repeat_last_n <span class="o">=</span> 64, repeat_penalty <span class="o">=</span> 1.100000, presence_penalty <span class="o">=</span> 0.000000, frequency_penalty <span class="o">=</span> 0.000000, top_k <span class="o">=</span> 40, tfs_z <span class="o">=</span> 1.000000, top_p <span class="o">=</span> 0.950000, typical_p <span class="o">=</span> 1.000000, temp <span class="o">=</span> 0.800000, mirostat <span class="o">=</span> 0, mirostat_lr <span class="o">=</span> 0.100000, mirostat_ent <span class="o">=</span> 5.000000
+generate: n_ctx <span class="o">=</span> 512, n_batch <span class="o">=</span> 512, n_predict <span class="o">=</span> 1024, n_keep <span class="o">=</span> 0
+
+
+ recipe <span class="k">for </span>avocado toast with fresh herbs and lemon
+
+This is a simple and delicious recipe <span class="k">for </span>avocado toast that incorporates fresh herbs and a squeeze of lemon. The addition of the herbs gives the dish a bright, refreshing flavor that complements the richness of the avocado.
+Ingredients:
+
+<span class="k">*</span> 2 slices of bread <span class="o">(</span>preferably whole wheat or whole grain<span class="o">)</span>
+<span class="k">*</span> 1 ripe avocado, mashed
+<span class="k">*</span> Fresh herbs <span class="o">(</span>such as parsley, basil, or cilantro<span class="o">)</span> chopped
+<span class="k">*</span> Salt and pepper to taste
+<span class="k">*</span> Lemon wedges <span class="o">(</span>optional<span class="o">)</span>
+Instructions:
+
+1. Toast the bread <span class="k">until </span>it is lightly browned.
+2. Spread the mashed avocado on top of the toasted bread.
+3. Sprinkle the chopped fresh herbs over the avocado.
+4. Season with salt and pepper to taste.
+5. Squeeze a slice of lemon over the avocado toast, <span class="k">if </span>desired.
+6. Serve immediately and enjoy!
+
+This recipe is easy to make and can be customized to your liking by using different types of bread or herbs. The lemon adds a <span class="nb">nice </span>tanginess to the dish, but feel free to omit it <span class="k">if </span>you prefer. Enjoy! <span class="o">[</span>end of text]
+
+llama_print_timings:        load <span class="nb">time</span> <span class="o">=</span>  5282.86 ms
+llama_print_timings:      sample <span class="nb">time</span> <span class="o">=</span>   200.57 ms /   308 runs   <span class="o">(</span>    0.65 ms per token,  1535.59 tokens per second<span class="o">)</span>
+llama_print_timings: prompt <span class="nb">eval time</span> <span class="o">=</span>   637.46 ms /     9 tokens <span class="o">(</span>   70.83 ms per token,    14.12 tokens per second<span class="o">)</span>
+llama_print_timings:        <span class="nb">eval time</span> <span class="o">=</span>  9804.24 ms /   307 runs   <span class="o">(</span>   31.94 ms per token,    31.31 tokens per second<span class="o">)</span>
+llama_print_timings:       total <span class="nb">time</span> <span class="o">=</span> 10668.64 ms
+ggml_metal_free: deallocating
+</pre></td></tr></tbody></table></code></pre></div></div> <p>The model output is this:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+</pre></td><td class="rouge-code"><pre> recipe for avocado toast with fresh herbs and lemon
+
+This is a simple and delicious recipe for avocado toast that incorporates fresh herbs and a squeeze of lemon. The addition of the herbs gives the dish a bright, refreshing flavor that complements the richness of the avocado.
+Ingredients:
+
+* 2 slices of bread (preferably whole wheat or whole grain)
+* 1 ripe avocado, mashed
+* Fresh herbs (such as parsley, basil, or cilantro) chopped
+* Salt and pepper to taste
+* Lemon wedges (optional)
+Instructions:
+
+1. Toast the bread until it is lightly browned.
+2. Spread the mashed avocado on top of the toasted bread.
+3. Sprinkle the chopped fresh herbs over the avocado.
+4. Season with salt and pepper to taste.
+5. Squeeze a slice of lemon over the avocado toast, if desired.
+6. Serve immediately and enjoy!
+
+This recipe is easy to make and can be customized to your liking by using different types of bread or herbs. The lemon adds a nice tanginess to the dish, but feel free to omit it if you prefer. Enjoy! [end of text]
+</pre></td></tr></tbody></table></code></pre></div></div> <p>In this example we installed the LLama2-7B param model for chat. Later I will show how to do the same for the bigger Llama2 models. To see all the LLM model versions that Meta has released on hugging face go <a href="https://huggingface.co/meta-llama">here</a>. Note that to use any of these models from hugging face you’ll need to request approval using this <a href="https://ai.meta.com/resources/models-and-libraries/llama-downloads/">form</a>. You can do that following this <a href="https://twitter.com/jamescalam/status/1682766618831777794?s=61&amp;t=Pw-aY--IwGlNpRBvUW-P9g">demo</a> by James Briggs.</p> <p>To run the model locally though you’ll need the quantized versions of the model (in order to fit within the limitations of your macbook pro). These versions have been made available by <a href="https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML/tree/main">TheBloke</a> (based on the work by <a href="https://github.com/ggerganov/llama.cpp">ggerganov</a>), and that’s what we are using here.</p> <h1 id="run-with-langchain">Run with Langchain</h1> <p>To use your local model with Langchain follow the langchain documentation <a href="https://python.langchain.com/docs/use_cases/question_answering/how_to/local_retrieval_qa#llama-v2">here</a>.</p> <p>Note that you’ll need to pass the correct path to your model bin file in the LLamaCpp <code class="language-plaintext highlighter-rouge">model_path</code> param . For me this path was <code class="language-plaintext highlighter-rouge">"../llama.cpp/models/llama-2-7b-chat.ggmlv3.q4_K_M.bin"</code> as shown below:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+</pre></td><td class="rouge-code"><pre><span class="c1"># Make sure the model path is correct for your system!
+</span><span class="n">llm</span> <span class="o">=</span> <span class="nc">LlamaCpp</span><span class="p">(</span>
+    <span class="n">model_path</span><span class="o">=</span><span class="sh">"</span><span class="s">../llama.cpp/models/llama-2-7b-chat.ggmlv3.q4_K_M.bin</span><span class="sh">"</span><span class="p">,</span>
+    <span class="n">n_gpu_layers</span><span class="o">=</span><span class="n">n_gpu_layers</span><span class="p">,</span>
+    <span class="n">n_batch</span><span class="o">=</span><span class="n">n_batch</span><span class="p">,</span>
+    <span class="n">n_ctx</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span>
+    <span class="n">f16_kv</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>  <span class="c1"># MUST set to True, otherwise you will run into problem after a couple of calls
+</span>    <span class="n">callback_manager</span><span class="o">=</span><span class="n">callback_manager</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <h1 id="running-other-llama-model-versions">Running other LLama model versions</h1> <p>LLama has released different versions of the models, as discussed. However to run them locally you’ll need the quantized versions provided by independent developers such as <a href="https://huggingface.co/TheBloke">TheBloke</a>.</p> <p>To download other versions you’ll need to</p> <ul> <li>find the appropriate quantized version you’ll need, for example go <a href="https://huggingface.co/TheBloke/Llama-2-70B-GGML">here</a> for the 70B param GGML model version</li> <li>adjust the names of the models in the commands used, for example replace <code class="language-plaintext highlighter-rouge">llama-2-7b-chat.ggmlv3.q4_K_M.bin</code> with <code class="language-plaintext highlighter-rouge">llama-2-70b.ggmlv3.q4_0.bin</code></li> </ul> <p>For example, I was able to install the 13B chat version and ran it successfully. To do that and test that it works go to the <code class="language-plaintext highlighter-rouge">llama.cpp</code> directory (if you are not already) and do</p> <div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre></td><td class="rouge-code"><pre>
+curl <span class="nt">-L</span> https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/resolve/main/llama-2-13b-chat.ggmlv3.q4_0.bin <span class="nt">--output</span> ./models/llama-2-13b-chat.ggmlv3.q4_0.bin   
+<span class="nv">LLAMA_METAL</span><span class="o">=</span>1 make
+./main <span class="nt">-m</span> ./models/llama-2-13b-chat.ggmlv3.q4_0.bin <span class="nt">-n</span> 1024 <span class="nt">-ngl</span> 1 <span class="nt">-p</span> <span class="s2">"recipe for avocado toast"</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <h1 id="performance">Performance</h1> <p>I was able to run the 7B chat version model on my machine - see this <a href="https://github.com/bayesways/local_llama2_demo">repo</a> for my setup. I ran it on a Macbook pro with an M2 Pro chip 16G RAM and it took ~1-2 seconds to generate the response. The performance you’ll experience will be a function of the parameters used. To see all the parameters go to <code class="language-plaintext highlighter-rouge">llama.cpp</code> directory and do</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>./main --help
+</pre></td></tr></tbody></table></code></pre></div></div> <p>I found performance to be sensitive to the context size (<code class="language-plaintext highlighter-rouge">--ctx-size</code> in terminal, <code class="language-plaintext highlighter-rouge">n_ctx</code> in langchain) in Langchain but less so in the terminal. If you are getting a slow response try lowering the context size <code class="language-plaintext highlighter-rouge">n_ctx</code>.</p> <p>Here are the performance metadata from the terminal calls for the two models:</p> <p>Performance of the 7B model:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+</pre></td><td class="rouge-code"><pre>llama_print_timings:        load time =  4910.88 ms
+llama_print_timings:      sample time =   154.19 ms /   236 runs   (    0.65 ms per token,  1530.57 tokens per second)
+llama_print_timings: prompt eval time =   491.16 ms /     9 tokens (   54.57 ms per token,    18.32 tokens per second)
+llama_print_timings:        eval time =  7490.65 ms /   235 runs   (   31.88 ms per token,    31.37 tokens per second)
+llama_print_timings:       total time =  8155.16 ms
+</pre></td></tr></tbody></table></code></pre></div></div> <p>Performance of the 13B model:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+</pre></td><td class="rouge-code"><pre>llama_print_timings:        load time =  8227.97 ms
+llama_print_timings:      sample time =   331.46 ms /   506 runs   (    0.66 ms per token,  1526.60 tokens per second)
+llama_print_timings: prompt eval time =  8755.93 ms /   266 tokens (   32.92 ms per token,    30.38 tokens per second)
+llama_print_timings:        eval time = 28269.76 ms /   504 runs   (   56.09 ms per token,    17.83 tokens per second)
+llama_print_timings:       total time = 37405.66 ms
+</pre></td></tr></tbody></table></code></pre></div></div> <h1 id="run-online-in-google-colabhugging-face">Run Online in Google Colab+Hugging Face</h1> <p>If you don’t have a macbook with a M2 chip or want faster performance you can run llama2 with langchain in a google colab <a href="https://github.com/bayesways/local_llama2_demo/blob/main/llama_2_13b_chat_agent.ipynb">notebook</a>. I’ve taken the instructions from this <a href="https://twitter.com/jamescalam/status/1682766618831777794?s=61&amp;t=Pw-aY--IwGlNpRBvUW-P9g">demo</a> by James Briggs and simplified. The notebook runs from start to finish in ~ 10 mins.</p> <p>Since we are using Google Colab the model is running on the GPUs that Google makes available as part of the Colab service. I found that 13b parameter Llama2 model runs fast and stays within the GPU memory limits of the free Colab version. The 70B parameter is worth trying but you might need to upgrade the resources and with a paid subscription for that. We also make use of the the Hugging face pipeline from Langchain which allows to run any model published in Hugging Face, which makes for more general code, but for that you will need any API key.</p> <p>The setup you need is as follows:</p> <ul> <li>Hugging face api key</li> <li>Save the Hugging face api key in a file <code class="language-plaintext highlighter-rouge">secret_api_keys.env</code> which you’ll save in your top directory of the google drive.</li> <li>To apply to use LLama2 and get approved (go <a href="https://ai.meta.com/resources/models-and-libraries/llama-downloads/">here</a> and register with an email same as the one in your hugging face account)</li> <li>Hugging face to match your Meta approval with your Hugging face email</li> </ul> <h2 id="references">References</h2> <ul> <li>Llama2+Langchain <a href="https://twitter.com/jamescalam/status/1682766618831777794?s=61&amp;t=Pw-aY--IwGlNpRBvUW-P9g">demo</a> by James Briggs</li> <li>Run LLama2 on macbook pro based on three similar instructions by <a href="https://twitter.com/AdrienBrault/status/1681503574814081025">Adrien Brault</a>, <a href="https://blog.lastmileai.dev/run-llama-2-locally-in-7-lines-apple-silicon-mac-c3f46143f327">Suyog Sonwalkar</a> or <a href="https://www.youtube.com/watch?v=Kg588OVYTiw">Abhishek Thakur</a></li> <li>Langchain <a href="https://python.langchain.com/docs/use_cases/question_answering/local_retrieval_qa">documentation</a> for locally run models</li> </ul>]]></content><author><name></name></author><category term="llm"/><summary type="html"><![CDATA[In this post I will show how to build a simple LLM chain that runs completely locally on your macbook pro. Will use the latest Llama2 models with Langchain.]]></summary></entry><entry><title type="html">Track your goals with Obsidian</title><link href="https://bayesways.github.io/blog/2023/goal-tracker-obsidian/" rel="alternate" type="text/html" title="Track your goals with Obsidian"/><published>2023-06-08T00:00:00+00:00</published><updated>2023-06-08T00:00:00+00:00</updated><id>https://bayesways.github.io/blog/2023/goal-tracker-obsidian</id><content type="html" xml:base="https://bayesways.github.io/blog/2023/goal-tracker-obsidian/"><![CDATA[<p>This blog post presents how I got started setting up my goal tracking process using Obsidian and a few amazing plugins. At a later post I may come back to assess how it worked.</p> <h1 id="motivation">Motivation</h1> <p>As someone who struggles to stick to one thing, I’ve been looking for a tool to help me set and track goals. I’ve been using Obsidian for a month to keep notes on various interests of mine. It has been a very helpful so far, so I started looking for ways to organize my checklists and tasks with it as well. I am already running a checklist for the week and a general check list for things I am curious about. However I found that the weekly checklist was inadequate for my needs. I needed something to actually organize my time at the micro level (hour or day) and to connect it to macro goals (monthly or even yearly). Simply having a weekly priority list didn’t cut it.</p> <h1 id="daily-and-weekly-notes">Daily and weekly notes</h1> <p>I was inspired by <a href="https://nicolevanderhoeven.com/">Nicole van der Hoeven</a> to use Obsidian for goal tracking. Her youtube channel and blog contains many useful processes for increasing your productivity in general. After browsing the materials on her website I decided to try set up a system, heavily based on her suggestions.</p> <p>First I installed the <a href="https://github.com/liamcain/obsidian-calendar-plugin">Calendar plugin</a> which is perfect for daily logs. But if you pair it with another plugin called <a href="https://github.com/liamcain/obsidian-periodic-notes">Periodic notes</a> you can go beyond daily to weekly/monthly etc. That’s what I am interested in, so that I can connect my daily work to my larger monthly goals all the way to the yearly if needed.</p> <p>Here are the basic steps :</p> <ol> <li>create a daily notes template(more on this in a minute) to help me organize my work at the lowest level possible, the day. This is something I didn’t have before so I hope to provide me with the structure I need.</li> <li>create a weekly template to replace my current weekly checklist notes.</li> <li>put all the templates in my templates folder.</li> <li>create a reviews folder with daily and weekly subfolders to save all of the notes I intend to create.</li> <li>install Periodic notes and set the appropriate paths in the settings of the plugin</li> <li>Set the appropriate template-folder pairs in the settings of the <a href="https://github.com/SilentVoid13/Templater">Templater plugin</a> (if you don’t use it I recommend checking it out).</li> </ol> <h1 id="effective-templates">Effective templates</h1> <p>To create effective templates I start from one recommended by others and try to understand what it does by breaking it down. This way I can keep only the bits that work for me.</p> <p>As I worked with the daily note template I realized that there are basically three things I needed.</p> <ul> <li>a daily log, a place to brain dump with no regrets :)</li> <li>a list of tasks I need to finish to keep me on track</li> <li>a way to connect these tasks to the long term goals</li> </ul> <p>Here is the daily template I landed on (after 2-3 days of experimenting):</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+</pre></td><td class="rouge-code"><pre>## Direction
+This is what you are working towards!
+
+![[reviews/weekly/Weekly Review 2023-W23#This week]]
+
+## Task due today
+
+# Log
+
+### Tomorrow, I need to ...
+
+</pre></td></tr></tbody></table></code></pre></div></div> <ul> <li>Direction: this pulls in the goals I’ve set for the week (more on this below)</li> <li>Task due today: is a checklist that I create manually</li> <li>Tomorrow I need to: prepare checklist for tomorrow’s note</li> <li>Log: brain dump area</li> </ul> <p>The following part uses the <a href="https://github.com/blacksmithgu/obsidian-dataview">Dataview plugin</a> which is an extremely powerful tool. Here I am doing a simple query from the weekly note to pull in the goals of the week and present them in my daily note.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>![[reviews/weekly/Weekly Review 2023-W23#This week]]
+</pre></td></tr></tbody></table></code></pre></div></div> <p>For the weekly note I needed three things:</p> <ul> <li>goals for the week</li> <li>and end of week checklist for things that need to happen every week</li> <li>a space to reflect on the week and jot down lessons for the next week</li> <li>A way to connect the weekly goals to the monthly level (more on this later)</li> </ul> <p>Here is the weekly template I went with (after some tinkering again):</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+</pre></td><td class="rouge-code"><pre>&gt; [!warning] No more than 3 !
+&gt; If you could only get three specific goals done this week, what would they be? 
+## This week
+- [ ] 
+
+## Monthly initiatives
+
+Keep these things in mind as you do this week's review:
+
+## Monthly review 2023-M06 
+
+[[reviews/monthly/Monthly Review 2023-M06#This month]]
+
+
+## Reflections for the week 
+&gt; [!question]
+&gt; Did you finish all of last weeks items?
+
+
+## End-of-week-checklist
+
+- [ ] review events for the week
+- [ ] backup computer
+</pre></td></tr></tbody></table></code></pre></div></div> <p>You notice the pattern. A place to keep organized on the daily level but connect it to the level above too. Then at the weekly level a place to keep organized and connect it to the level above. And so on.</p> <p>For now to connect the levels all I do is to list the goals of the levels above within the note for the tasks below. I will come back to this and reassess if this is sufficient or not, but in these few days I’ve been using it’s working fine.</p> <p>One final note on templates. I found that using the <a href="https://help.obsidian.md/Editing+and+formatting/Callouts">Callouts functions</a> to create visual warnings help me write better goals.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre></td><td class="rouge-code"><pre>&gt; [!warning] No more than 3 !
+&gt; If you could only get three specific goals done this week, what would they be? 
+</pre></td></tr></tbody></table></code></pre></div></div> <h1 id="okrs-for-the-quarter">OKRs for the quarter</h1> <p>Most goals or tasks take a little bit of time, say a couple of hours. But some of my learning goals, such as learning a programming language, can span months. For such goals, I am writing them down as quarterly goals and then creating monthly initiatives to help me achieve these goals. The initiatives are intended to be as factual as possible, the technical term being OKRs. It seems a little formal to track goals this way. But I’ve never found an effective way to track such long term goals, so I am willing to give the OKR method a try. For a more detailed description you can see this <a href="https://marcus.se.net/how-i-set-and-track-goals-in-obsidian/">post</a> by Marcus Ollson.</p> <p>Again following the same idea as above, I embed the monthly initiatives in the weekly notes, and the quarterly goals in the monthly review notes. I did not see the need to plan the year yet, so I stopped at the quarter. Nicole goes into more details in her <a href="https://www.youtube.com/watch?v=T2Aeaq4sk7M">video</a> which is very helpful.</p> <p>For now I will stick with the simple methods I described above but I will revisit this post to assess it.</p>]]></content><author><name></name></author><category term="productivity"/><category term="obsidian"/><category term="plugins"/><summary type="html"><![CDATA[This blog post presents how I got started setting up my goal tracking process using Obsidian and a few amazing plugins. At a later post I may come back to assess how it worked.]]></summary></entry><entry><title type="html">How to get started with LLM App building and Langchain? Part 2 of n</title><link href="https://bayesways.github.io/blog/2023/LLM-apps-p2/" rel="alternate" type="text/html" title="How to get started with LLM App building and Langchain? Part 2 of n"/><published>2023-05-16T00:00:00+00:00</published><updated>2023-05-16T00:00:00+00:00</updated><id>https://bayesways.github.io/blog/2023/LLM-apps-p2</id><content type="html" xml:base="https://bayesways.github.io/blog/2023/LLM-apps-p2/"><![CDATA[<h1 id="overview">Overview</h1> <p>In <a href="https://bayesways.github.io/blog/2023/How-to-get-started-with-LLM-App-building-and-Langchain-Part-1-of-n/">Part 1 of n</a> we got a general overview of the Langchain framework for building LLM apps. We are now going deeper into some of the issues we will face as we start building our app. As a reminder, our goal is to build an app that can answer questions on a personal library of information, and provide citations for its answers. The fancy term for this is <em>retrieval augmented generation</em>. The high level structure of a chain appropriate for this task is described in <a href="https://docs.langchain.com/docs/use-cases/qa-docs">this</a> use case from the Langchain documentation. I am copying it here directly from the docs:</p> <p><strong>Ingestion</strong> In order use a language model to interact with your data, you first have to get in a suitable format. That format would be an <code class="language-plaintext highlighter-rouge">Index</code>. By putting data into an Index, you make it easy for any downstream steps to interact with it.</p> <p>There are several types of indexes, but by far the most common one is a Vectorstore. Ingesting documents into a vectorstore can be done with the following steps:</p> <ol> <li>Load documents (using a Document Loader)</li> <li>Split documents (using a Text Splitter)</li> <li>Create embeddings for documents (using a Text Embedding Model)</li> <li>Store documents and embeddings in a vectorstore</li> </ol> <p><strong>Generation</strong> Now that we have an Index, how do we use this to do generation? This can be broken into the following steps:</p> <ol> <li>Receive user question</li> <li>Lookup documents in the index relevant to the question</li> <li>Construct a PromptValue from the question and any relevant documents (using a PromptTemplate).</li> <li>Pass the PromptValue to a model</li> <li>Get back the result and return to the user.</li> </ol> <h1 id="implementation">Implementation</h1> <p>We will use python so let’s go to the documentation <a href="https://python.langchain.com/en/latest/use_cases/question_answering.html">page</a> for this use case from Langchain. This doc provides a quick start where the <em>ingestion</em> and <em>generation</em> parts are all combined together. Later on we will break it down to understand the components one by one. But first let’s see the big picture.</p> <p>Note that the document we use here is the State of the Union Address, so we need to first create a txt file containing the text in question and save in <code class="language-plaintext highlighter-rouge">../docs/state_of_the_union.txt</code> - copy past from <a href="https://www.whitehouse.gov/state-of-the-union-2023/">here</a>. The firefox read mode comes handy to give us the pure text without the extra stuff on the page. If you want a clean version to play with you can find an older state of the union address text file <a href="https://github.com/hwchase17/langchain/blob/master/docs/modules/state_of_the_union.txt">here</a>. If you use the latter, modify your query below to ask a question relevant to that text.</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+</pre></td><td class="rouge-code"><pre><span class="c1"># requires: pip install openai langchain chromadb 
+</span><span class="kn">import</span> <span class="n">os</span>
+<span class="n">os</span><span class="p">.</span><span class="n">environ</span><span class="p">[</span><span class="sh">'</span><span class="s">OPENAI_API_KEY</span><span class="sh">'</span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">your_api_key</span><span class="o">&gt;</span>
+
+<span class="kn">from</span> <span class="n">langchain.document_loaders</span> <span class="kn">import</span> <span class="n">TextLoader</span>
+<span class="n">loader</span> <span class="o">=</span> <span class="nc">TextLoader</span><span class="p">(</span><span class="sh">'</span><span class="s">../docs/state_of_the_union.txt</span><span class="sh">'</span><span class="p">)</span>
+  
+<span class="kn">from</span> <span class="n">langchain.indexes</span> <span class="kn">import</span> <span class="n">VectorstoreIndexCreator</span>
+<span class="n">qa_index</span> <span class="o">=</span> <span class="nc">VectorstoreIndexCreator</span><span class="p">().</span><span class="nf">from_loaders</span><span class="p">([</span><span class="n">loader</span><span class="p">])</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <p>We will ask a question about a topic from the text. The president said the following (quoting from the text):</p> <blockquote> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>For example, I — I should have known this, but I didn’t until two years ago: Thirty million workers have to sign non-compete agreements for the jobs they take. Thirty million. So a cashier at a burger place can’t walk across town and take the same job at another burger place and make a few bucks more.
+</pre></td></tr></tbody></table></code></pre></div> </div> </blockquote> <p>Let’s ask the bot a question about it.</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre></td><td class="rouge-code"><pre><span class="n">query</span> <span class="o">=</span> <span class="sh">"</span><span class="s">What did the president say about non-compete agreements?</span><span class="sh">"</span>
+<span class="n">qa_index</span><span class="p">.</span><span class="nf">query</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <p>The response:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre>" The president said that they have banned non-compete agreements so companies have to compete for workers and pay them what they're worth."
+</pre></td></tr></tbody></table></code></pre></div></div> <p>A pretty reasonable response.</p> <p>Let’s see what’s going on under the hood - have been waiting to say this.</p> <h1 id="implementation-break-down">Implementation break down</h1> <h3 id="ingestion">Ingestion</h3> <p>We first address the <strong>ingestion</strong> part of the steps. This means preparing the structure around the documents that we want to use when a user asks a question. The outcome of this part is a vector database, that we can pass to a chain during the <strong>generation</strong> part.</p> <h4 id="vectorindex">VectorIndex</h4> <p>The key functionality we need to understand is the <code class="language-plaintext highlighter-rouge">VectorstoreIndexCreator</code>, and specifically the following command.</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre><span class="nc">VectorstoreIndexCreator</span><span class="p">().</span><span class="nf">from_loaders</span><span class="p">([</span><span class="n">loader</span><span class="p">])</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <p>What this does is the following:</p> <ol> <li>split the text in chunks (we will discuss the specifics but it doesn’t matter to much</li> <li>specify the LLM model which we will use to compute the embeddings (vector values assigned to each chunk)</li> <li>create a database where we store the vectors, we will use <code class="language-plaintext highlighter-rouge">Chroma</code></li> </ol> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+</pre></td><td class="rouge-code"><pre><span class="c1"># 1
+</span><span class="n">documents</span> <span class="o">=</span> <span class="n">loader</span><span class="p">.</span><span class="nf">load</span><span class="p">()</span>
+<span class="kn">from</span> <span class="n">langchain.text_splitter</span> <span class="kn">import</span> <span class="n">CharacterTextSplitter</span>
+<span class="n">text_splitter</span> <span class="o">=</span> <span class="nc">CharacterTextSplitter</span><span class="p">(</span><span class="n">chunk_size</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">chunk_overlap</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">texts</span> <span class="o">=</span> <span class="n">text_splitter</span><span class="p">.</span><span class="nf">split_documents</span><span class="p">(</span><span class="n">documents</span><span class="p">)</span>
+
+<span class="c1"># 2
+</span><span class="kn">from</span> <span class="n">langchain.embeddings</span> <span class="kn">import</span> <span class="n">OpenAIEmbeddings</span>
+<span class="n">embeddings</span> <span class="o">=</span> <span class="nc">OpenAIEmbeddings</span><span class="p">()</span>
+
+<span class="c1"># 3
+</span><span class="kn">from</span> <span class="n">langchain.vectorstores</span> <span class="kn">import</span> <span class="n">Chroma</span>
+<span class="n">db</span> <span class="o">=</span> <span class="n">Chroma</span><span class="p">.</span><span class="nf">from_documents</span><span class="p">(</span><span class="n">texts</span><span class="p">,</span> <span class="n">embeddings</span><span class="p">)</span>
+<span class="n">retriever</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="nf">as_retriever</span><span class="p">()</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <p>If we want to preview the <strong>generation</strong> part we can add a fourth step</p> <ol> <li>create a chain that uses the vectors to answer questions</li> </ol> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre></td><td class="rouge-code"><pre><span class="c1"># 4
+</span><span class="n">qa_index</span> <span class="o">=</span> <span class="n">RetrievalQA</span><span class="p">.</span><span class="nf">from_chain_type</span><span class="p">(</span><span class="n">llm</span><span class="o">=</span><span class="nc">OpenAI</span><span class="p">(),</span> <span class="n">chain_type</span><span class="o">=</span><span class="sh">"</span><span class="s">stuff</span><span class="sh">"</span><span class="p">,</span> <span class="n">retriever</span><span class="o">=</span><span class="n">retriever</span><span class="p">)</span>
+
+<span class="n">qa_index</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span><span class="n">query</span><span class="p">)</span> <span class="c1">#same query as before
+</span></pre></td></tr></tbody></table></code></pre></div></div> <h2 id="generation">Generation</h2> <p>Once we have our vector database we can use it for various tasks, aka create different kinds of chains.</p> <h4 id="retrieve-relevant-documents">Retrieve relevant documents</h4> <p>The simplest thing we can do is to retrieve a list of relevant documents to a specific query. The following code will return 4 documents, i.e. text chunks, ordered by relevance to the query we made.</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre></td><td class="rouge-code"><pre><span class="n">docsearch</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="nf">as_retriever</span><span class="p">()</span>
+<span class="n">query</span> <span class="o">=</span> <span class="sh">"</span><span class="s">What did the president say about non-compete agreements?</span><span class="sh">"</span>
+<span class="n">docs</span> <span class="o">=</span> <span class="n">docsearch</span><span class="p">.</span><span class="nf">get_relevant_documents</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <h4 id="ask-questions-based-on-the-documents">Ask questions based on the documents</h4> <p>Once we have our docs, we can ask questions on them with a simple LLM chain, which is made easy using the <code class="language-plaintext highlighter-rouge">load_qa_chain</code> template.</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+</pre></td><td class="rouge-code"><pre><span class="kn">from</span> <span class="n">langchain.chains.question_answering</span> <span class="kn">import</span> <span class="n">load_qa_chain</span>
+<span class="kn">from</span> <span class="n">langchain.llms.openai</span> <span class="kn">import</span> <span class="n">OpenAI</span>
+
+<span class="n">chain</span> <span class="o">=</span> <span class="nf">load_qa_chain</span><span class="p">(</span><span class="n">llm</span><span class="o">=</span><span class="nc">OpenAI</span><span class="p">(),</span> <span class="n">chain_type</span><span class="o">=</span><span class="sh">"</span><span class="s">stuff</span><span class="sh">"</span><span class="p">)</span>
+<span class="n">query</span> <span class="o">=</span> <span class="sh">"</span><span class="s">What did the president say about non-compete agreements?</span><span class="sh">"</span>
+<span class="n">chain</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span><span class="n">input_documents</span><span class="o">=</span><span class="n">docs</span><span class="p">,</span> <span class="n">question</span><span class="o">=</span><span class="n">query</span><span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div> <p>From here on we can use the docs we retrieved as we like and combine it with other chains. The most common use case is passing the docs as part of the prompt input, called <em>context</em>, and asking the bot to answer using this context. See more examples <a href="https://python.langchain.com/en/latest/modules/chains/index_examples/qa_with_sources.html">here</a></p> <h2 id="references">References</h2> <ul> <li>Langchain <a href="https://python.langchain.com/en/latest/use_cases/question_answering.html">overview</a> of question and answering with sources</li> <li>Langchain <a href="https://python.langchain.com/en/latest/modules/indexes/getting_started.html">docs</a> for Indexes.</li> <li>Examples of</li> </ul>]]></content><author><name></name></author><category term="llm"/><summary type="html"><![CDATA[Overview]]></summary></entry><entry><title type="html">How to get started with LLM App building and Langchain? Part 1 of n</title><link href="https://bayesways.github.io/blog/2023/LLM-apps-p1/" rel="alternate" type="text/html" title="How to get started with LLM App building and Langchain? Part 1 of n"/><published>2023-05-15T00:00:00+00:00</published><updated>2023-05-15T00:00:00+00:00</updated><id>https://bayesways.github.io/blog/2023/LLM-apps-p1</id><content type="html" xml:base="https://bayesways.github.io/blog/2023/LLM-apps-p1/"><![CDATA[<p>I will use this space to document my effort to build LLM applications, starting pretty much from scratch. In order to have a concrete goal, I will aim to understand how to build an app that can answer questions and provide citations, utilizing a personal library of information. However, the lessons will apply equally to other use cases, some of which are listed in the references.</p> <h2 id="background">Background</h2> <p>It goes without saying that any LLM application is going to be based on <strong>Langchain</strong>. The <a href="https://docs.langchain.com/docs/">conceptual guide</a> is a good place to start.</p> <p>LLMs are game changing, partly because, they can simulate semantic understanding. This means that they can perform tasks that would typically require someone to understand the meaning of text, even if they don’t really “understand” the text. Text is an example of an unstructured data format, as opposed to a structured dataset such as a database for example. Querying a database is simple because the data is stored in a way that’s optimized for querying. Text on the other hand is words on a page without any pre-specified structure imposed on them. One can (correctly) object this point as human language is in fact at least partially structured, otherwise any random set of words would be meaningful. However for data retrieval purposes, a newspaper article is highly unstructured compared to a database. LLMs fill the gap and make retrieving information from unstructured text data possible, performing at the level we would expect someone with human language understanding to perform.</p> <p>The way LLM applications impose “structure” on text is via indexes (see the conceptual documentation <a href="https://docs.langchain.com/docs/components/indexing/">here</a>). These are emerging specialized data structures to facilitate LLM application building. Currently the main type of index used is a <em>vector databases</em> which stores <em>embeddings</em>, a numerical vector associated with a chunk of text.</p> <h2 id="basic-elements-of-langchain">Basic Elements of Langchain</h2> <h3 id="models">Models</h3> <p>Three kinds of models (quoting directly the documentation <a href="https://docs.langchain.com/docs/components/models/">page</a>)</p> <ul> <li>Large Language Models (LLMs) are the first type of models we cover. These models take a text string as input, and return a text string as output.</li> <li>Chat Models are the second type of models we cover. These models are usually backed by a language model, but their APIs are more structured. Specifically, these models take a list of Chat Messages as input, and return a Chat Message.</li> <li>Text Embedding Models. These models take text as input and return a list of floats.</li> </ul> <h3 id="inputoutput">Input/Output</h3> <p>Any LLM output can be post-processed to fit specific requirements. Langchain provides the specialized output parsers for this reason (see <a href="https://docs.langchain.com/docs/components/prompts/output-parser">here</a>)</p> <h3 id="indexes">Indexes</h3> <p>The database structure needed to facilitate LLM building. As we mentioned above, LLM applications building requires us to put some structure around text and store it, aka <em>index</em> text data. To do that Langchain provides specialized tools and integrates with the providers of such vector databases, such as <code class="language-plaintext highlighter-rouge">pinecone</code> and <code class="language-plaintext highlighter-rouge">chroma</code>. Note that to create a text embedding, typically we need to use a pre-trained LLM.</p> <h3 id="memory">Memory</h3> <p>Referes to the memory used by a chat agent. It’s important to distinguish between short and long memory. <em>Short memory</em> captures the context of a singular conversation with an agent, whereas <em>long memory</em> refers to the rest of information that persists between conversations. The main concrete example of memory usage is for storing the context of a conversation between a user and a chatbot, and expanding that context as the conversation evolves. Langchain provides tools to handle this scenario.</p> <h3 id="chains">Chains</h3> <p>Chain is the name given to an object that captures smaller components pieced together. The main type of a chain is an <strong>LLM-Chain</strong> which typically contains three components:</p> <ul> <li>an LLM model (such as <a href="https://platform.openai.com/docs/models/gpt-3">GPT3</a> or <a href="https://ai.googleblog.com/2021/10/introducing-flan-more-generalizable.html">Flan</a>)</li> <li>a prompting template</li> <li>an output parser Each component might be broken down into further specialized pieces to achieve the desired goal of the application.</li> </ul> <p>The other common type of chain is an <strong>Index-related chain</strong> which uses the power of an LLM to interact with a specific text that the user chooses. The simplest way to pass the text to the LLM is to “stuff” it in the prompt of an LLM-Chain, hence defaulting back to the framework described above. However, that’s not always the best choice and Langchain provides some additional methods for interacting with (indexed) text using LLMs.</p> <h3 id="prompting">Prompting</h3> <p>Prompting refers to the text input given to an LLM or chat agent. Although it might sound simple, it is a vital piece of LLM app building. Langchain provides some frameworks for selecting the “right” prompt depending on the use case. The general task of prompting is more general, so we will have to come back to this.</p> <h3 id="agents">Agents</h3> <p>This refers to chains that do not have a pre-determined order of components. Instead, these chains consists of an “agent” and a pre-determined list of tools. The user interacts with the “agent” which has access to a suite of tools, and it’s up to the “agent” to decide what tool to use when, depending on the user input. We will leave this for a next post.</p> <h2 id="references">References</h2> <ul> <li><a href="https://docs.langchain.com/docs/">Conceptual guide to langchain</a></li> <li><a href="https://docs.langchain.com/docs/category/use-cases">List of LLM use cases</a></li> </ul>]]></content><author><name></name></author><category term="llm"/><summary type="html"><![CDATA[I will use this space to document my effort to build LLM applications, starting pretty much from scratch. In order to have a concrete goal, I will aim to understand how to build an app that can answer questions and provide citations, utilizing a personal library of information. However, the lessons will apply equally to other use cases, some of which are listed in the references.]]></summary></entry><entry><title type="html">Obsessed with Obsidian</title><link href="https://bayesways.github.io/blog/2023/Obsidian/" rel="alternate" type="text/html" title="Obsessed with Obsidian"/><published>2023-05-11T00:00:00+00:00</published><updated>2023-05-11T00:00:00+00:00</updated><id>https://bayesways.github.io/blog/2023/Obsidian</id><content type="html" xml:base="https://bayesways.github.io/blog/2023/Obsidian/"><![CDATA[<h2 id="overview">Overview</h2> <p>Obsidian is a note organizer. I have been using the very basic features for a few months but only recently delved deeper. It’s been game changing. In this post I will lay out a quick list of the resources I used to learn.</p> <p>For someone who likes to keep notes <em>and</em> revisit them, Obsidian can be extremely pleasing to use. Having a blog is a good alternative but Obsidian differs in a couple of fundamental reasons:</p> <ul> <li>it’s easy to use and aesthetically pleasing</li> <li>it allows for seamless linking between notes</li> <li>it’s as simple or as complex as the user desires</li> </ul> <p>I think the best way to describe it is a <em>personal notebook interface</em>.</p> <p>I started using Obsidian to keep random tabs on ideas. Then I started linking them leaving placeholders for anything I meant to follow up on. I started treating it as a digital addendum to my physical notebook, creating notes for anything digital I wanted to keep for future reference. Soon enough I had a list of notes containing coding snippets, articles, quotes, video links, recipes, and instructions. Then I started using it as a todo list as well. But more recently I discovered how to use it a productivity booster in everything else I do. Here are some use cases:</p> <h4 id="write-blog-posts">Write blog posts</h4> <p>Be able to create a blog post using a template. Use the <strong>templater plugin</strong>.</p> <h4 id="meeting-notes">Meeting Notes</h4> <p>Create notes for meetings and be able to search them later. This could be achieved by logging notes with <strong>tags</strong>, or by using <strong>metadata</strong>. If use tags make sure to use <strong>tag-wrangler plugin</strong> Can also sync it up to a calendar plugin to keep all notes organized and connected to a calendar.</p> <p>Later on I can create a note that retrieves information from the meetings with the <strong>datataview plugin</strong>.</p> <h4 id="special-events">Special Events</h4> <p>Connect notes to a special physical event so you can find later This could be notes from a special event like a workshop or a hackathon. Can use a special tag for this.</p> <h4 id="learning">Learning</h4> <p>Organize notes as I learn something new. Connect and refactor as I go along.</p> <ul> <li>Note new things that are interesting</li> <li>come back to connect them to existing notes</li> </ul> <p>Organizing them in a concise manner would be a learning goal, but also could be shared on the web using <strong>Obsidian Publish</strong> if one wishes to “learn in public”.</p> <h4 id="keep-notes-from-interesting-meetings">Keep notes from interesting meetings</h4> <p>Keep notes from meeting and connect them to profiles and other notes. See this <a href="https://www.youtube.com/watch?v=5j9fAvJCaig">video</a> for a great example of how to organize meetings and profiles using <strong>templater plugin</strong> and <strong>datataview plugin</strong>.</p> <h2 id="resources">Resources</h2> <p><a href="https://nicolevanderhoeven.com/">Nicole van der Hoeven</a> has a ton of excellent resources on Obsidian, such as this <a href="https://www.youtube.com/watch?v=5j9fAvJCaig">video</a></p> <p><a href="https://www.youtube.com/@linkingyourthinking">Linkingyourthinking</a> is a great youtube channel with a lot of good info as well.</p>]]></content><author><name></name></author><category term="productivity"/><category term="obsidian"/><category term="plugins"/><summary type="html"><![CDATA[Overview]]></summary></entry></feed>
