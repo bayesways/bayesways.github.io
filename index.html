@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kon</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .terminal {
+            width: 100%;
+            max-width: 600px;
+            line-height: 1.8;
+            font-size: 0.95rem;
+        }
+
+        .prompt {
+            color: #4ade80;
+        }
+
+        .output {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .link {
+            color: #60a5fa;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        .line {
+            min-height: 1.8em;
+            white-space: pre;
+        }
+
+        .char.cursor-here {
+            background: #4ade80;
+            color: #0a0a0a;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 0.6em;
+            height: 1.3em;
+            background: #4ade80;
+            vertical-align: text-bottom;
+            animation: blink 1s step-end infinite;
+            margin-left: 1px;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="terminal" id="terminal"></div>
+
+    <script>
+        const terminal = document.getElementById('terminal');
+
+        const lines = [
+            { type: 'prompt', text: '$ whoami' },
+            { type: 'output', text: 'Kon' },
+            { type: 'blank' },
+            { type: 'prompt', text: '$ cat interests.txt' },
+            { type: 'rethink', first: 'data science, machine learning', final: 'AI' },
+            { type: 'rethink', first: 'math, cryptography, statistics, biotech', final: 'science' },
+            { type: 'rethink', prefix: 'and building things with ', first: 'code', final: 'AI' },
+            { type: 'blank' },
+            { type: 'prompt', text: '$ ls links/' },
+            { type: 'link', text: 'blog', url: 'https://bayesways.github.io/notes-to-myself/#/' },
+            { type: 'link', text: 'linkedin', url: 'https://www.linkedin.com/in/vamvourellis/' },
+            { type: 'link', text: 'github', url: 'https://github.com/bayesways' },
+            { type: 'blank' },
+            { type: 'prompt', text: '$ ' }
+        ];
+
+        let allText = [];
+        let cursorPos = 0;
+        let currentLine = 0;
+        let currentChar = 0;
+        let phase = 'typing';
+        let rethinkPhase = null;
+        let rethinkDeleteCount = 0;
+
+        const typeSpeed = 50;
+        const deleteSpeed = 40;
+        const pauseBetweenLines = 300;
+        const pauseBeforeRethink = 500;
+
+        function getPrefix(line) {
+            if (line.type === 'link') return '  → ';
+            return '';
+        }
+
+        function render() {
+            let html = '';
+            let charIndex = 0;
+
+            for (let i = 0; i < allText.length; i++) {
+                const item = allText[i];
+
+                if (item.type === 'blank') {
+                    html += '<div class="line">&nbsp;</div>';
+                    continue;
+                }
+
+                let lineHtml = '<div class="line">';
+                const prefix = getPrefix(item);
+                const fullText = prefix + item.typed;
+
+                if (item.type === 'prompt') {
+                    lineHtml += '<span class="prompt">';
+                } else if (item.type === 'link') {
+                    lineHtml += '<span class="output">' + prefix + '</span><a class="link" href="' + item.url + '">';
+                } else {
+                    lineHtml += '<span class="output">';
+                }
+
+                const textToRender = item.type === 'link' ? item.typed : fullText;
+
+                for (let j = 0; j < textToRender.length; j++) {
+                    if (charIndex === cursorPos) {
+                        lineHtml += '<span class="char cursor-here">' + textToRender[j] + '</span>';
+                    } else {
+                        lineHtml += textToRender[j];
+                    }
+                    charIndex++;
+                }
+
+                if (item.type === 'link') {
+                    lineHtml += '</a>';
+                } else {
+                    lineHtml += '</span>';
+                }
+
+                if (i === allText.length - 1 && cursorPos >= charIndex) {
+                    lineHtml += '<span class="cursor"></span>';
+                }
+
+                lineHtml += '</div>';
+                html += lineHtml;
+                charIndex++;
+            }
+
+            if (allText.length === 0) {
+                html = '<div class="line"><span class="cursor"></span></div>';
+            }
+
+            terminal.innerHTML = html;
+        }
+
+        function getTotalChars() {
+            let total = 0;
+            for (const item of allText) {
+                if (item.type !== 'blank') {
+                    const prefix = getPrefix(item);
+                    total += (item.type === 'link' ? item.typed.length : (prefix + item.typed).length);
+                }
+                total++;
+            }
+            return total - 1;
+        }
+
+        function tick() {
+            if (phase === 'typing') {
+                if (currentLine >= lines.length) {
+                    phase = 'done';
+                    return;
+                }
+
+                const line = lines[currentLine];
+
+                if (line.type === 'blank') {
+                    allText.push({ type: 'blank' });
+                    cursorPos = getTotalChars() + 1;
+                    currentLine++;
+                    render();
+                    setTimeout(tick, pauseBetweenLines);
+                    return;
+                }
+
+                if (line.type === 'rethink') {
+                    const prefix = line.prefix || '';
+                    if (!allText[currentLine]) {
+                        allText[currentLine] = { type: 'output', typed: '' };
+                        rethinkPhase = prefix ? 'typePrefix' : 'typeFirst';
+                    }
+
+                    if (rethinkPhase === 'typePrefix') {
+                        if (currentChar < prefix.length) {
+                            allText[currentLine].typed += prefix[currentChar];
+                            currentChar++;
+                            cursorPos = getTotalChars();
+                            render();
+                            setTimeout(tick, typeSpeed);
+                        } else {
+                            rethinkPhase = 'typeFirst';
+                            currentChar = 0;
+                            tick();
+                        }
+                        return;
+                    }
+
+                    if (rethinkPhase === 'typeFirst') {
+                        if (currentChar < line.first.length) {
+                            allText[currentLine].typed += line.first[currentChar];
+                            currentChar++;
+                            cursorPos = getTotalChars();
+                            render();
+                            setTimeout(tick, typeSpeed);
+                        } else {
+                            rethinkPhase = 'pause';
+                            setTimeout(tick, pauseBeforeRethink);
+                        }
+                    } else if (rethinkPhase === 'pause') {
+                        rethinkPhase = 'delete';
+                        rethinkDeleteCount = line.first.length;
+                        tick();
+                    } else if (rethinkPhase === 'delete') {
+                        if (rethinkDeleteCount > 0) {
+                            allText[currentLine].typed = allText[currentLine].typed.slice(0, -1);
+                            rethinkDeleteCount--;
+                            cursorPos = getTotalChars();
+                            render();
+                            setTimeout(tick, deleteSpeed);
+                        } else {
+                            rethinkPhase = 'typeFinal';
+                            currentChar = 0;
+                            tick();
+                        }
+                    } else if (rethinkPhase === 'typeFinal') {
+                        if (currentChar < line.final.length) {
+                            allText[currentLine].typed += line.final[currentChar];
+                            currentChar++;
+                            cursorPos = getTotalChars();
+                            render();
+                            setTimeout(tick, typeSpeed);
+                        } else {
+                            rethinkPhase = null;
+                            currentLine++;
+                            currentChar = 0;
+                            cursorPos = getTotalChars() + 1;
+                            render();
+                            setTimeout(tick, pauseBetweenLines);
+                        }
+                    }
+                    return;
+                }
+
+                if (!allText[currentLine] || allText[currentLine].type !== line.type) {
+                    allText[currentLine] = { ...line, typed: '' };
+                }
+
+                if (currentChar < line.text.length) {
+                    allText[currentLine].typed += line.text[currentChar];
+                    currentChar++;
+                    cursorPos = getTotalChars();
+                    render();
+                    setTimeout(tick, typeSpeed);
+                } else {
+                    currentLine++;
+                    currentChar = 0;
+                    cursorPos = getTotalChars() + 1;
+                    render();
+                    setTimeout(tick, pauseBetweenLines);
+                }
+            }
+        }
+
+        render();
+        setTimeout(tick, 500);
+    </script>
+</body>
+
+</html>
